@@ -1,0 +1,18 @@
+body {
+	font-family: "Exo 2", "Helvetica Neue", Helvetica, sans-serif;
+	font-weight: 300;
+	font-size: 1.5em;
+	line-height: 1.2em;
+	background: #FDF6E3;
+	color: #475B62;
+}
+
+#tooltip {
+	position: absolute;
+	opacity: 0.5;
+}
+
+/*--SVG--*/
+circle {
+	fill:none;
+}
