@@ -10,11 +10,10 @@ var r = 150,
 	cx = 200 + margin.left,
 	cy = 200 + margin.top,
 	px = cx+r,
-	py = cy,
-	pr = 10;
+	py = cy;
 
 var t=0, //time
-	f = 0.1 //angular frequency
+	f = 0.08 //angular frequency
 	tr_delay = 30; //time between animation updates
 
 var animating = false;
@@ -53,30 +52,65 @@ d3.select('svg').append('circle')
 		.style("stroke","black")
 		.style("stroke-width",5)
 
+//---tracer---
 d3.select('svg').append('circle')
 	.attr('id','tracer')
 	.attr('cx',px)
 	.attr("cy",py)
-	.attr("r",pr)
-	.style("fill","black")
+	.attr("r",4)
+	.style("fill","red")
+	.style("stroke","none")
+
+d3.select('svg').append('line')
+	.attr('id','liner_r')
+	.attr('x1',cx)
+	.attr('y1',cy)
+	.attr('x2',px)
+	.attr('y2',py)
 	.style("stroke","black")
-		// .style("stroke-width",5)
+	.style('stroke-width',2)
+
+d3.select('svg').append('line')
+	.attr('id','liner_x')
+	.attr('x1',cx)
+	.attr('y1',cy)
+	.attr('x2',px)
+	.attr('y2',cy)
+	.style("stroke","green")
+	.style('stroke-width',2)
+
+d3.select('svg').append('line')
+	.attr('id','liner_y')
+	.attr('x1',cx)
+	.attr('y1',cy)
+	.attr('x2',cx)
+	.attr('y2',py)
+	.style("stroke","red")
+	.style('stroke-width',2)
+///-----------
 
 function trace () {
 	setTimeout(function() {
 		t+=1;
-		px=cx-r*Math.cos(f*t);
-		py=cy+r*Math.sin(f*t);
+		px=cx+r*Math.cos(f*t);
+		py=cy-r*Math.sin(f*t);
 		
-		d3.select('#tracer').attr('cy',py);
-		d3.select('#tracer').attr('cx',px);
+		d3.select('#tracer')
+			.attr('cy',py)
+			.attr('cx',px);
+		d3.select('#liner_r')
+			.attr('y2',py)
+			.attr('x2',px);
+		d3.select('#liner_x').attr('x2',px);
+		d3.select('#liner_y')
+			.attr('y2',py)
+			.attr('x1',px)
+			.attr('x2',px);
 
 		if (animating){trace();}
 	}
 	,tr_delay);
 };
-
-trace();
 
 d3.select("svg").on("click",function(){
 	if (animating) {animating=false;}
