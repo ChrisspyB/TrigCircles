@@ -1,6 +1,7 @@
+(function(){
 "use strict"
-
 var margin = {top:50, right:50, bottom:50, left:50};
+
 
 var height 		= 800 - margin.top - margin.bottom,
 	width 		= 1200 - margin.left - margin.right;
@@ -184,3 +185,5 @@ d3.select("svg").on("click",function(){
 		trace();
 	}
 });
+
+})();
