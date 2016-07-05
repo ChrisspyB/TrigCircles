@@ -4,18 +4,18 @@
 
 
 var margin = {top:50, right:50, bottom:50, left:50},
-	height 		= 1200 - margin.top - margin.bottom,
-	width 		= 2400 - margin.left - margin.right,
+	height 		= 600 - margin.top - margin.bottom,
+	width 		= 1200 - margin.left - margin.right,
 
 	t = 0,
 
 	//********use d3 range********
 	//********Need to skip r=0 circles********
-	x_off = width/8,
+	x_off = width/4,
 	y_off = height/2,
-	amp_scaling = 250,
+	amp_scaling = 100,
 	freq_scaling = 1,
-
+	trace_r=3,
 	animating = false,
 	ani_steps  = 50, //steps per period.
 	t_step = 2*Math.PI/ani_steps,
@@ -34,7 +34,7 @@ var GenSeries = function(type){
 		f=n;
 		var skip = false;
 		switch(type){
-			case 'saw':
+			case 'sawtooth':
 				a=1/n;
 				break;
 			case 'square':
@@ -58,13 +58,13 @@ var GenSeries = function(type){
 	console.log(freq)
 	
 };
-GenSeries('saw');
+GenSeries('sawtooth');
 
-//a,f,n:
-//a: array of amplitudes
-//f: array of frequencies
-//n: number of terms in sum
 var SinSum = function(a,f,n,t){
+	//a,f,n:
+	//a: array of amplitudes
+	//f: array of frequencies
+	//n: number of terms in sum
 	var sum = 0;
 	for (var i = 0; i<n; i++){
 		sum+=a[i]*Math.sin(f[i]*t);
@@ -144,7 +144,7 @@ var trace_circles = svg.selectAll('circle')
 		.append('circle')
 			.attr('cx',function(d,i){return x_off+(ani_steps-i-1)*20;})
 			.attr('cy',function(d,i){return d;})
-			.attr('r',10)
+			.attr('r',trace_r)
 			.style('fill','black');
 
 var animate = function(){
@@ -185,4 +185,8 @@ svg.on("click",function(){
 	}
 });
 
+d3.select('#c2_slidediv').on('change',function(){
+	var val = d3.select('#c2_slider').property('value');
+	d3.select(this).select('label').text(val);
+	});
 })();

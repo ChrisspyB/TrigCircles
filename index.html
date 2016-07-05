@@ -10,6 +10,18 @@
 <div id="chart1"></div>
 <div>Chart2:</div>
 <div id="chart2"></div>
+<form>
+	<select id="c2_type">
+      <option value="triangle">Triangle</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Sawtooth</option>
+    </select>
+</form>
+<div id='c2_slidediv'>
+	<input id="c2_slider" type="range" value="4" min="1" max="8" step="1">
+	<label>4</label>
+</div>
+
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="script1.js"></script>
 <script src="script2.js"></script>
