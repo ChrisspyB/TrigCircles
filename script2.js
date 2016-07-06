@@ -17,17 +17,23 @@ var margin = {top:50, right:50, bottom:50, left:50},
 	freq_scaling = 1,
 	trace_r=3,
 	animating = false,
+	ani_updating = false,
 	ani_steps  = 50, //steps per period.
 	t_step = 2*Math.PI/ani_steps,
 	ani_delay = 1000, //
 	step = 0,
 
-//to be destroyed
-	terms = 8,
+//Data and related
+	terms =  d3.select('#c2_slider').property('value'), //note: term 1 is the offset
 	amp = [],
-	freq = [];
+	freq = [],
+	type = d3.select('#c2_type').property('value'),
+	pos = {x:[],y:[]};
+
+	d3.select('#c2_slidediv').select('label').text(terms);
 
 var GenSeries = function(type){
+	//Generate the amplitudes and frequencies for the series.
 	amp = [], freq = [];
 	var a = 0, f = 0;
 	for(var n=1; n<terms; n++){
@@ -54,11 +60,8 @@ var GenSeries = function(type){
 		amp.push(a*amp_scaling);
 		freq.push(f*freq_scaling);
 	}
-	console.log(amp)
-	console.log(freq)
 	
 };
-GenSeries('sawtooth');
 
 var SinSum = function(a,f,n,t){
 	//a,f,n:
@@ -79,31 +82,27 @@ var CosSum = function(a,f,n,t){
 	return sum;
 };
 
-//----
-//The possible positions of each circle
-
-var pos = {
-	x:[],
-	y:[]
-};
-for(var i=0; i<terms; i++){
-	pos.x.push([]);
-	pos.y.push([]);
-	for(var j=0; j<ani_steps; j++){
-		pos.x[i].push(
-			x_off+CosSum(amp,freq,i,j*2*Math.PI/ani_steps));
-		pos.y[i].push(
-			y_off+SinSum(amp,freq,i,j*2*Math.PI/ani_steps));
+var GenPos = function(){
+	pos={x:[],y:[]};
+	//Generate the possible positions of each circle
+	for(var i=0; i<terms; i++){
+		pos.x.push([]);
+		pos.y.push([]);
+		for(var j=0; j<ani_steps; j++){
+			pos.x[i].push(
+				x_off+CosSum(amp,freq,i,j*2*Math.PI/ani_steps));
+			pos.y[i].push(
+				y_off+SinSum(amp,freq,i,j*2*Math.PI/ani_steps));
+		}
 	}
-}
-
+};
+//--Initial Data Setup--
+GenSeries(type);
+GenPos();
+console.log(pos);
 var trace_y = pos.y[terms-1].slice(0);
 var a = trace_y.shift();
 		trace_y.push(a); //***
-
-//----
-console.log(pos)
-
 
 var svg = d3.select('#chart2').append('svg')
 	.attr('width',width+margin.left+margin.right)
@@ -117,7 +116,8 @@ svg.append('rect')
 	.attr("y",margin.top)
 	.style('fill','white');
 
-var circles = svg.selectAll('circle')
+var circlesGroup = svg.append('g');
+var circles = circlesGroup.selectAll('circle')
 	.data(amp)
 	.enter()
 		.append('circle')
@@ -131,7 +131,7 @@ var circles = svg.selectAll('circle')
 			.style('fill','none')
 			.style('stroke','black');
 
-var amp_line = svg.append('line')
+var amp_line = circlesGroup.append('line')
 	.attr('x1',pos.x[0][step])
 	.attr('y1',pos.y[terms-1][step])
 	.attr('x2',pos.x[terms-1][step])
@@ -147,18 +147,46 @@ var trace_circles = svg.selectAll('circle')
 			.attr('r',trace_r)
 			.style('fill','black');
 
-var animate = function(){
+//--
+
+// Updates and animation
+var TEMP=0;
+var Animate = function(){
 	setTimeout(function(){
-		//...UpdatePositions();
+		TEMP++;
+		if(ani_updating){
+			// terms=5;
+			Recaclulate();
+			ani_updating=false;
+		}
 		if (!animating){return;}
 		// t+=t_step;
 		step++;
 		if(step>=ani_steps){step=0;}
 		// step--;
 		// if(step<0){step=ani_steps-1;}
+
+		//DATA JOIN
+		var circles = circlesGroup.selectAll('circle').data(amp)
+		//UPDATE
 		circles
 		.attr('cx',function(d,i){return pos.x[i][step];})
-		.attr('cy',function(d,i){return pos.y[i][step];});
+		.attr('cy',function(d,i){return pos.y[i][step];})
+		.attr('r',function(d){return Math.abs(d);});
+		//ENTER
+		circles.enter().append('circle')
+			.attr('cx',function(d,i){
+				return x_off+CosSum(amp,freq,i,t);
+			})
+			.attr('cy',function(d,i){
+				return y_off+SinSum(amp,freq,i,t);;
+			})
+			.attr('r',function(d){return Math.abs(d);})
+			.style('fill','none')
+			.style('stroke','black');
+		//EXIT
+		circles.exit().remove();
+		
 		amp_line
 			.attr('y1',pos.y[terms-1][step])
 			.attr('x2',pos.x[terms-1][step])
@@ -168,25 +196,51 @@ var animate = function(){
 		trace_y.push(a);
 		// var a = trace_y.pop();
 		// trace_y.unshift(a);
+
 		trace_circles.attr().data(trace_y)
 			.attr('cy',function(d,i){return d;})
 
 
 
-		animate();
+		Animate();
 	},ani_delay/10);
 };
+
+var Recaclulate = function(){
+	//Recalculate and update chart based on new parameters
+	GenSeries(type);
+	GenPos();
+	step=0;
+	trace_y = pos.y[terms-1].slice(0);
+	var a = trace_y.shift();
+	trace_y.push(a); //***
+	// // var a = trace_y.shift();
+	// // trace_y.push(a); //***
+
+	// trace_circles.attr().data(trace_y)
+	// 	.attr('cy',function(d,i){return d;})
+}
+
+//--Interactivity--
 
 svg.on("click",function(){
 	if (animating) {animating=false;}
 	else {
 		animating=true;
-		animate();
+		Animate();
 	}
 });
 
 d3.select('#c2_slidediv').on('change',function(){
 	var val = d3.select('#c2_slider').property('value');
 	d3.select(this).select('label').text(val);
+	terms = val;
+	ani_updating=true;
+	});
+
+d3.select('#c2_type').on('change',function(){
+	var val = d3.select(this).property('value');
+	type = val;
+	ani_updating=true;
 	});
 })();
