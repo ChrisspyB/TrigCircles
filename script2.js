@@ -32,6 +32,18 @@ var margin = {top:50, right:50, bottom:50, left:50},
 
 	d3.select('#c2_slidediv').select('label').text(terms);
 
+//amp bar chart
+
+var ampChart ={
+	x : margin.left+width/2+100,
+	y : margin.top+100,
+	h:height,
+	w:width/2, //*unused!*
+	bw:30, //bar width
+	bsep:30 //bar separation
+	}
+	
+	
 var GenSeries = function(type){
 	//Generate the amplitudes and frequencies for the series.
 	amp = [], freq = [];
@@ -146,18 +158,52 @@ var trace_circles = svg.selectAll('circle')
 			.attr('cy',function(d,i){return d;})
 			.attr('r',trace_r)
 			.style('fill','black');
+			
+			
+var ampGroup = svg.append('g')
+	
+var y_amp = d3.scale.linear()
+	.domain([0,d3.max(amp,function(d){return Math.abs(d)})])
+	.range([0,ampChart.h/2])
+	
+var ampBars = ampGroup.selectAll('rect')
+	.data(amp).enter()
+		.append('rect')
+		.attr("width",ampChart.bw)
+		.attr("height",function(d){
+			return y_amp(Math.abs(d));})
+		.attr("x",function(d,i){return ampChart.x+i*ampChart.bsep;})
+		.attr("y",function(d){
+			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
+		.style('fill','none')
+		.style('stroke', 'black');
 
 //--
-
 // Updates and animation
-var TEMP=0;
 var Animate = function(){
 	setTimeout(function(){
-		TEMP++;
 		if(ani_updating){
 			// terms=5;
 			Recaclulate();
 			ani_updating=false;
+			
+			y_amp.domain([0,d3.max(amp,function(d){return Math.abs(d)})]);
+			
+			ampBars = ampGroup.selectAll('rect').data(amp)
+				.attr("y",function(d){
+					return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
+				.attr('height', function(d){return y_amp(Math.abs(d));});
+			
+			ampBars.enter()
+				.append('rect')
+				.attr("width",ampChart.bw)
+				.attr("height",function(d){return y_amp(Math.abs(d));})
+				.attr("x",function(d,i){return ampChart.x+i*ampChart.bsep;})
+				.attr("y",function(d){
+			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
+				.style('fill','none')
+				.style('stroke', 'black');
+			ampBars.exit().remove();
 		}
 		if (!animating){return;}
 		// t+=t_step;
@@ -167,12 +213,12 @@ var Animate = function(){
 		// if(step<0){step=ani_steps-1;}
 
 		//DATA JOIN
-		var circles = circlesGroup.selectAll('circle').data(amp)
+		circles = circlesGroup.selectAll('circle').data(amp);
 		//UPDATE
 		circles
-		.attr('cx',function(d,i){return pos.x[i][step];})
-		.attr('cy',function(d,i){return pos.y[i][step];})
-		.attr('r',function(d){return Math.abs(d);});
+			.attr('cx',function(d,i){return pos.x[i][step];})
+			.attr('cy',function(d,i){return pos.y[i][step];})
+			.attr('r',function(d){return Math.abs(d);});
 		//ENTER
 		circles.enter().append('circle')
 			.attr('cx',function(d,i){
