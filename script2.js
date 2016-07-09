@@ -38,10 +38,10 @@ var ampChart ={
 	x : margin.left+width/2+100,
 	y : margin.top+100,
 	h:height,
-	w:width/2, //*unused!*
+	w:(width)/4,
 	bw:30, //bar width
 	bsep:30 //bar separation
-	}
+	};
 	
 	
 var GenSeries = function(type){
@@ -111,7 +111,8 @@ var GenPos = function(){
 //--Initial Data Setup--
 GenSeries(type);
 GenPos();
-console.log(pos);
+
+
 var trace_y = pos.y[terms-1].slice(0);
 var a = trace_y.shift();
 		trace_y.push(a); //***
@@ -158,8 +159,15 @@ var trace_circles = svg.selectAll('circle')
 			.attr('cy',function(d,i){return d;})
 			.attr('r',trace_r)
 			.style('fill','black');
-			
-			
+
+var xScale = d3.scale.ordinal()
+	.domain(d3.range(0,amp.length))
+	.rangeBands([0,ampChart.w]);
+
+var hAxis = d3.svg.axis()
+	.scale(xScale)
+	.orient('bottom')
+
 var ampGroup = svg.append('g')
 	
 var y_amp = d3.scale.linear()
@@ -169,15 +177,22 @@ var y_amp = d3.scale.linear()
 var ampBars = ampGroup.selectAll('rect')
 	.data(amp).enter()
 		.append('rect')
-		.attr("width",ampChart.bw)
+		.attr("width",xScale.rangeBand())
 		.attr("height",function(d){
 			return y_amp(Math.abs(d));})
-		.attr("x",function(d,i){return ampChart.x+i*ampChart.bsep;})
+		.attr("x",function(d,i){return ampChart.x+xScale(i);})
 		.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
-		.style('fill','none')
+		.style('fill','grey')
 		.style('stroke', 'black');
 
+var hGuide = ampGroup.append('g')
+		hAxis(hGuide)
+		hGuide.attr('transform','translate('+ampChart.x+', '+(ampChart.y+ampChart.h/2)+')')
+		hGuide.selectAll('path')
+			.style({fill: 'none',stroke:'#000'})
+		hGuide.selectAll('line')
+			.style({stroke:'#000'})
 //--
 // Updates and animation
 var Animate = function(){
@@ -188,23 +203,30 @@ var Animate = function(){
 			ani_updating=false;
 			
 			y_amp.domain([0,d3.max(amp,function(d){return Math.abs(d)})]);
-			
+			xScale.domain(d3.range(0,amp.length)).rangeBands([0,ampChart.w]);
+			hAxis.scale(xScale)
+
 			ampBars = ampGroup.selectAll('rect').data(amp)
+				.attr("width",xScale.rangeBand())
+				.attr("x",function(d,i){return ampChart.x+xScale(i);})
 				.attr("y",function(d){
 					return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
 				.attr('height', function(d){return y_amp(Math.abs(d));});
 			
+			hAxis(hGuide);
+
 			ampBars.enter()
 				.append('rect')
-				.attr("width",ampChart.bw)
+				.attr("width",xScale.rangeBand())
+				.attr("x",function(d,i){return ampChart.x+xScale(i);})
 				.attr("height",function(d){return y_amp(Math.abs(d));})
-				.attr("x",function(d,i){return ampChart.x+i*ampChart.bsep;})
 				.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
-				.style('fill','none')
+				.style('fill','grey')
 				.style('stroke', 'black');
 			ampBars.exit().remove();
 		}
+		
 		if (!animating){return;}
 		// t+=t_step;
 		step++;
