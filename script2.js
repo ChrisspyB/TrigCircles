@@ -133,6 +133,7 @@ var circles = circlesGroup.selectAll('circle')
 	.data(amp)
 	.enter()
 		.append('circle')
+			.attr('id','sine')
 			.attr('cx',function(d,i){
 				return x_off+CosSum(amp,freq,i,t);
 			})
@@ -140,8 +141,6 @@ var circles = circlesGroup.selectAll('circle')
 				return y_off+SinSum(amp,freq,i,t);;
 			})
 			.attr('r',function(d){return Math.abs(d);})
-			.style('fill','none')
-			.style('stroke','black');
 
 var amp_line = circlesGroup.append('line')
 	.attr('x1',pos.x[0][step])
@@ -149,15 +148,6 @@ var amp_line = circlesGroup.append('line')
 	.attr('x2',pos.x[terms-1][step])
 	.attr('y2',pos.y[terms-1][step])
 	.style('stroke','green');
-
-// var trace_circles = svg.selectAll('circle')
-// 	.data(trace_y)
-// 	.enter()
-// 		.append('circle')
-// 			.attr('cx',function(d,i){return x_off+(ani_steps-i-1)*20;})
-// 			.attr('cy',function(d,i){return d;})
-// 			.attr('r',trace_r)
-// 			.style('fill','black');
 
 var trace_linefunc = d3.svg.line()
 	.x(function(d,i){return x_off+(ani_steps-i-1)*20;})
@@ -186,15 +176,13 @@ var y_amp = d3.scale.linear()
 var ampBars = ampGroup.selectAll('rect')
 	.data(amp).enter()
 		.append('rect')
+		.attr('id','bar')
 		.attr("width",xScale.rangeBand())
 		.attr("height",function(d){
 			return y_amp(Math.abs(d));})
 		.attr("x",function(d,i){return ampChart.x+xScale(i);})
 		.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
-		.style('fill','grey')
-		.style('stroke', 'black')	
-		.style('opacity', '0.5');
 
 var hGuide = ampGroup.append('g')
 		hAxis(hGuide)
@@ -227,20 +215,17 @@ var Animate = function(){
 
 			ampBars.enter()
 				.append('rect')
+				.attr('id','bar')
 				.attr("width",xScale.rangeBand())
 				.attr("x",function(d,i){return ampChart.x+xScale(i);})
 				.attr("height",function(d){return y_amp(Math.abs(d));})
 				.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
-				.style('fill','grey')
-				.style('stroke', 'black')
-				.style('opacity', '0.5');
 
 			ampBars.exit().remove();
 		}
 		
 		if (!animating){return;}
-		// t+=t_step;
 		step++;
 		if(step>=ani_steps){step=0;}
 		// step--;
@@ -255,6 +240,7 @@ var Animate = function(){
 			.attr('r',function(d){return Math.abs(d);});
 		//ENTER
 		circles.enter().append('circle')
+			.attr('id','sine')
 			.attr('cx',function(d,i){
 				return x_off+CosSum(amp,freq,i,t);
 			})
@@ -262,8 +248,6 @@ var Animate = function(){
 				return y_off+SinSum(amp,freq,i,t);;
 			})
 			.attr('r',function(d){return Math.abs(d);})
-			.style('fill','none')
-			.style('stroke','black');
 		//EXIT
 		circles.exit().remove();
 		
