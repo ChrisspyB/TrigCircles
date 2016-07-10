@@ -112,7 +112,6 @@ var GenPos = function(){
 GenSeries(type);
 GenPos();
 
-
 var trace_y = pos.y[terms-1].slice(0);
 var a = trace_y.shift();
 		trace_y.push(a); //***
@@ -151,15 +150,26 @@ var amp_line = circlesGroup.append('line')
 	.attr('y2',pos.y[terms-1][step])
 	.style('stroke','green');
 
-var trace_circles = svg.selectAll('circle')
-	.data(trace_y)
-	.enter()
-		.append('circle')
-			.attr('cx',function(d,i){return x_off+(ani_steps-i-1)*20;})
-			.attr('cy',function(d,i){return d;})
-			.attr('r',trace_r)
-			.style('fill','black');
+// var trace_circles = svg.selectAll('circle')
+// 	.data(trace_y)
+// 	.enter()
+// 		.append('circle')
+// 			.attr('cx',function(d,i){return x_off+(ani_steps-i-1)*20;})
+// 			.attr('cy',function(d,i){return d;})
+// 			.attr('r',trace_r)
+// 			.style('fill','black');
 
+var trace_linefunc = d3.svg.line()
+	.x(function(d,i){return x_off+(ani_steps-i-1)*20;})
+	.y(function(d,i){return d;})
+	.interpolate('basis');
+
+var trace_line = svg.append('path')
+	.attr("d", trace_linefunc(trace_y))
+	.attr("stroke", "blue")
+	.attr("stroke-width", 2)
+	.attr("fill", "none");
+//-----------------
 var xScale = d3.scale.ordinal()
 	.domain(d3.range(0,amp.length))
 	.rangeBands([0,ampChart.w]);
@@ -167,7 +177,6 @@ var xScale = d3.scale.ordinal()
 var hAxis = d3.svg.axis()
 	.scale(xScale)
 	.orient('bottom')
-
 var ampGroup = svg.append('g')
 	
 var y_amp = d3.scale.linear()
@@ -184,7 +193,8 @@ var ampBars = ampGroup.selectAll('rect')
 		.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
 		.style('fill','grey')
-		.style('stroke', 'black');
+		.style('stroke', 'black')	
+		.style('opacity', '0.5');
 
 var hGuide = ampGroup.append('g')
 		hAxis(hGuide)
@@ -193,7 +203,7 @@ var hGuide = ampGroup.append('g')
 			.style({fill: 'none',stroke:'#000'})
 		hGuide.selectAll('line')
 			.style({stroke:'#000'})
-//--
+//-----------------
 // Updates and animation
 var Animate = function(){
 	setTimeout(function(){
@@ -223,7 +233,9 @@ var Animate = function(){
 				.attr("y",function(d){
 			return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
 				.style('fill','grey')
-				.style('stroke', 'black');
+				.style('stroke', 'black')
+				.style('opacity', '0.5');
+
 			ampBars.exit().remove();
 		}
 		
@@ -262,12 +274,14 @@ var Animate = function(){
 
 		var a = trace_y.shift();
 		trace_y.push(a);
+
+		trace_line
+			.attr("d", trace_linefunc(trace_y))
 		// var a = trace_y.pop();
 		// trace_y.unshift(a);
 
-		trace_circles.attr().data(trace_y)
-			.attr('cy',function(d,i){return d;})
-
+		// trace_circles.attr().data(trace_y)
+		// 	.attr('cy',function(d,i){return d;})
 
 
 		Animate();
