@@ -27,3 +27,9 @@ circle {
 	fill:none;
 	stroke:black;
 }
+
+#trace_line {
+	stroke:blue;
+	stroke-width:2;
+	fill:none;
+}
