@@ -7,12 +7,10 @@ body {
 	color: #475B62;
 }
 
-/*--SVG--*/
 circle {
 	fill:none;
 	stroke:black;
 }
-/*-/SVG/-*/
 
 #tooltip {
 	position: absolute;

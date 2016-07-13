@@ -15,11 +15,18 @@
       <option value="square">Square</option>
       <option value="sawtooth">Sawtooth</option>
       <option value="triangle">Triangle</option>
+      <option value="custom">Custom</option>
     </select>
 </form>
-<div id='c2_slidediv'>
-	<input id="c2_slider" type="range" value="12" min="1" max="160" step="1">
+<div id='c2_terms_div'>
+	<input id="c2_terms_slider" type="range" value="5" min="1" max="40" step="1">
 	<label>#label</label>
+	<label>Terms</label>
+</div>
+<div id='c2_amp_div'></div>
+<div id='c2_scale_div'>
+	<input id="c2_yscale" type="range" value="100" min="0.1" max="100" step="5">
+	<label>Scaling</label>
 </div>
 
 <script src="https://d3js.org/d3.v3.min.js"></script>

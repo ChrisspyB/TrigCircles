@@ -24,17 +24,18 @@ var margin = {top:50, right:50, bottom:50, left:50},
 	trace_sep = trace_width/ani_steps,
 
 //Data and related
-	terms =  d3.select('#c2_slider').property('value'), //note: term 1 is the offset
+	terms =  d3.select('#c2_terms_slider').property('value'), //note: term 1 is the offset
 	amp = [],
 	freq = [],
+	custom_amp = [1,0.5,0.2],
 	type = d3.select('#c2_type').property('value'),
 	pos = {x:[],y:[]};
 
-	d3.select('#c2_slidediv').select('label').text(terms);
+	d3.select('#c2_terms_div').select('label').text(terms);
 
 //amp bar chart
 var ampChart ={
-	x : margin.left+width/2+100,
+	x : margin.left+width-width/4,
 	y : margin.top+100,
 	h:height,
 	w:(width)/4,
@@ -49,7 +50,6 @@ var GenSeries = function(type){
 	var a = 0, f = 0;
 	for(var n=1; n<terms; n++){
 		f=n;
-		var skip = false;
 		switch(type){
 			case 'sawtooth':
 				a=1/n;
@@ -64,10 +64,15 @@ var GenSeries = function(type){
 			case 'pulse':
 				a= n%2 ? 1/n:1;
 				break;
+			case 'custom':
+				if(n>custom_amp.length){a=0;}
+				else{a=custom_amp[n-1];}
+				break;
 			default:
 				a=terms-n
 		}
-		if(skip){continue;}
+		d3.select('#c2_amp_div').selectAll('.c2_amp_slider:nth-child('+n+')')
+			.property('value',a);
 		amp.push(a*amp_scaling);
 		freq.push(f*freq_scaling);
 	}
@@ -142,8 +147,11 @@ var trace_linefunc = d3.svg.line()
 var trace_line = svg.append('path').attr('id','trace_line');
 //-----------------
 var xScale = d3.scale.ordinal()
-	.rangeBands([0,ampChart.w]);
-var hAxis = d3.svg.axis().orient('bottom');
+	.rangeBands([0,ampChart.w])
+
+var hAxis = d3.svg.axis()
+	.orient('bottom')
+	.tickValues(0);
 
 var ampGroup = svg.append('g');
 
@@ -151,15 +159,13 @@ var y_amp = d3.scale.linear()
 	.domain([0,d3.max(amp,function(d){return Math.abs(d)})])
 	.range([0,ampChart.h/2]);
 
-var ampBars = ampGroup.selectAll('rect');
-
 var hGuide = ampGroup.append('g')
 		hAxis(hGuide)
 		hGuide.attr('transform','translate('+ampChart.x+', '+(ampChart.y+ampChart.h/2)+')')
 		hGuide.selectAll('path')
 			.style({fill: 'none',stroke:'#000'})
 		hGuide.selectAll('line')
-			.style({stroke:'#000'});
+			.style({stroke:'#000'})
 
 //-----------------
 // Updates and animation
@@ -169,20 +175,20 @@ var Animate = function(initialize){
 
 			Recaclulate();
 			ani_updating=false;
-			
+
 			y_amp.domain([0,d3.max(amp,function(d){return Math.abs(d)})]);
 			xScale.domain(d3.range(0,amp.length)).rangeBands([0,ampChart.w]);
-			hAxis.scale(xScale);
 
-			ampBars = ampGroup.selectAll('rect').data(amp)
+			hAxis.scale(xScale);
+			hAxis(hGuide);
+
+			var ampBars = ampGroup.selectAll('rect').data(amp)
 				.attr("width",xScale.rangeBand())
 				.attr("x",function(d,i){return ampChart.x+xScale(i);})
 				.attr("y",function(d){
 					return ampChart.y+(d>0? ampChart.h/2-y_amp(d):ampChart.h/2);})
 				.attr('height', function(d){return y_amp(Math.abs(d));});
 			
-			hAxis(hGuide);
-
 			ampBars.enter()
 				.append('rect')
 				.attr('id','bar')
@@ -194,6 +200,25 @@ var Animate = function(initialize){
 				});
 
 			ampBars.exit().remove();
+
+			var ampSliders = d3.select('#c2_amp_div').selectAll('input').data(amp)
+			.attr('id',function(d,i) {return i;})
+			.attr('value',function(d) {return d/amp_scaling;})
+			.property('disabled',function(){return type==='custom'?false:true})
+
+			ampSliders.enter().append('input')
+			.attr('id',function(d,i) {return i;})
+			.attr('value',function(d) {return d/amp_scaling;})
+			.attr('type','number')
+			.attr('min','-1')
+			.attr('max','1')
+			.attr('step','0.05')
+			.style('width','200px')
+			.style('text-align','center')
+			.property('disabled',function(){return type==='custom'?false:true})
+			.classed('c2_amp_slider',true)
+
+			ampSliders.exit().remove();
 		}
 		
 		if (!animating){return;}
@@ -259,18 +284,52 @@ svg.on("click",function(){
 	}
 });
 
-d3.select('#c2_slidediv').on('change',function(){
-	var val = d3.select('#c2_slider').property('value');
+d3.select('#c2_terms_div').on('change',function(){
+	var val = d3.select('#c2_terms_slider').property('value');
 	d3.select(this).select('label').text(val);
 	terms = val;
 	ani_updating=true;
 	});
 
+d3.selectAll('#c2_amp_div').on('change',function(e){
+	//*Surely theres a better way!
+	custom_amp = [];
+	for (var i=1; i<terms; i++){
+		var val = parseFloat(d3.select(this).selectAll('.c2_amp_slider:nth-child('+i+')')
+			.property('value'))
+		if(typeof val !=='number' || isNaN(val)){val=0.0;}
+		else if(val>1){val=1;}
+		else if(val<-1){val=-1;}
+		custom_amp.push(val);
+	}
+	ani_updating=true;
+});
+
+d3.select('#c2_yscale').on('change',function(){
+	var old_scaling = amp_scaling;
+	amp_scaling = d3.select('#c2_yscale').property('value');
+	for(var i=0; i<amp.length; i++){
+		amp[i]=amp_scaling*amp[i]/old_scaling;
+	}
+	ani_updating = true;
+});
+
 d3.select('#c2_type').on('change',function(){
 	var val = d3.select(this).property('value');
 	type = val;
+	if(type === 'custom'){
+		for(var i=0; i<amp.length; i++){
+			custom_amp[i]=amp[i]/amp_scaling;
+		}
+		d3.select('#c2_amp_div .c2_amp_slider')
+			.property('disabled',false);
+	}
+	else{
+		d3.selectAll('#c2_amp_div .c2_amp_slider')
+			.property('disabled',true);
+	}
 	ani_updating=true;
 	});
 
-Animate(true); //
+Animate(true);
 })();
