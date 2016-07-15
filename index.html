@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fourier Series</title>
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div id="heading">
+	<div style = "font-size:70px;letter-spacing:15px;height:75px;color:#fff">Visualising Fourier Series</div>
+	<div style = "font-size:27px;color:#666">Periodic functions as sums of circles</div>
+</div>
+<div id="content">
+	<div id="circle_sin">
+		<h2>Sinusoids and Circles</h2>
+		Consider the unit circle. Starting from the positive x-axis and tracing the circle, plotting the y coordinate as a function of the polar angle t, we produce a sine wave of period 2pi i.e. <span id="eqn">y = sin(t)</span>.<br>
+		<div class ="interactive" id="small_sin_trace">#small_sin_trace</div>
+		If were to instead start tracing from the positive y-axis we see that the same procedure produces a cosine wave. This isn't surprising, given that <span id="eqn">cos(t) = sin(t+90)</span>.<br>
+		<div class ="interactive" id="small_cos_trace">#small_cos_trace</div>
+		By varying the parameters of the circle, we can plot arbitrary sinusoidal functions <span id="eqn">Asin(t+&alpha;)</span>. Notice how varying the radius, trace speed and starting position affects the amplitude, frequency and phase-offset of the resulting sinusoid.<br>
+		<div class ="interactive" id="sin_interactive">#sin_interactive</div>
+	</div>
+	<div id ="circle_sum">
+		<h2>Sums of Circles</h2>
+		We have just shown that an arbitrary sin function is represented by a circle when considering <span id="eqn">y(t)</span>. It follows that a sum of two sine waves can be represented by a corresponding sum of circles.<br>
+		<div class ="interactive" id="sum_threesin">#sum_threesin</div>
+		Indeed, it follows that any linear combination of arbitrary sin functions can be represented in this way.
+	</div>
+	<div id="fourier">
+		<h2>Fourier Series</h2>
+		From the study of Fourier Analysis, it turns out that any periodic function can be expressed as an infinite sum of sines and cosines, provided the function <span id="eqn">f(x)</span>.
+		<ul>
+			<li>has a finite period,</li>
+			<li>is single valued,</li>
+			<li>has an finite number of maxima/minima over one period,</li>
+			<li>has a finite number of discontinuities over one period,</li>
+			<li>encloses a finite area over one period.</li>
+		</ul>
+		Provided these conditions are met, the series will converge (non-uniformly) to the <span id="eqn">f(x)</span> at all points were <span id="eqn">f(x)</span> is continuous. At singularities, the series converges to the mid point of <span id="eqn">f(x)</span> either side of the discontinuity.<br>
+		<i>These conditions are sufficient but not necessary: there exists (weird) functions with a convergent fourier series that do not satisfy these conditions.</i><br><br>
+		It follows therefore that periodic functions can be <b>approximated</b> by truncating the series to include only the first few terms: a finite sum of sines and cosines and can therefore be visualised as a finite sum of circles.<br>
+		Some common periodic functions are shown below.
+	</div>
+	<div id ="acknowledge">
+		<h2>#Acknowledgements and related</h2>
+		<i>This page was created primarily as an exercise in building explorable explanations and to practice svg manipulation and d3.js. The interactives are home-made but are based on commonly used diagrams and .gifs found around the web.</i>
+	</div>
+</div>
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
