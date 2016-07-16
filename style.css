@@ -32,3 +32,22 @@ body {
 
 }
 
+/*svg elements*/
+svg{
+	background: #eee; 
+
+}
+circle {
+	fill:none;
+	stroke:#000;
+	stroke-width:2px;
+}
+line{
+	stroke:black;
+	stroke-width:2px;
+}
+.graph{
+	fill:none;
+	stroke:steelblue;
+	stroke-width:3px;
+}
