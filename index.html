@@ -18,7 +18,29 @@
 		If were to instead start tracing 90 degrees later i.e. from the positive y-axis we see that the same procedure produces a cosine wave. This isn't surprising, given that <span id="eqn">cos(t) = sin(t+90)</span>.<br>
 		<div class ="interactive" id="small_cos_trace">#small_cos_trace</div>
 		By varying the parameters of the circle, we can plot arbitrary sinusoidal functions <span id="eqn">Asin(t+&alpha;)</span>. Notice how varying the radius, trace speed and starting position affects the amplitude, frequency and phase-offset of the resulting sinusoid.<br>
-		<div class ="interactive" id="sin_interactive">#sin_interactive</div>
+		<div class ="interactive" id="sin_interactive">
+			<table border="0">
+				<tr>
+					<td>
+						<input id="sin_interactive_amp" type="range" value="150" min="10" max="150" step="10">
+						<label>1.5</label>
+					</td>
+					<td>
+						<input id="sin_interactive_cycles" type="range" value="2" min="0" max="4" step="0.2">
+						<label>2.0</label>
+					</td>
+					<td>
+						<input id="sin_interactive_phase" type="range" value="0" min="0" max="2" step="0.1">
+						<label>0.0&pi;</label>
+					</td>
+				</tr>
+				<tr>
+					<td>Amplitude</td>
+					<td>Frequency</td>
+					<td>Phase</td>
+				</tr>
+			</table>
+		</div>
 	</div>
 	<div id ="circle_sum">
 		<h2>Sums of Circles</h2>

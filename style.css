@@ -7,7 +7,12 @@ body {
 	background: #eee;
 	color: #000;
 }	
+table{
+	width:840px;
+	text-align: center;
+	table-layout: fixed;
 
+}
 #heading {
 	padding:75px;
 	text-align: center;
