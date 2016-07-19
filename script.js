@@ -3,7 +3,7 @@
 'use strict'
 var width = 840;
 
-var SingleTrig = function(div_id,w,h,amp,phase,freq,frames,cycles,fixed){
+var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 	if(!fixed){
 	    amp = parseFloat(d3.select(div_id+'_amp').property('value'));	
 	    cycles =  parseFloat(d3.select(div_id+'_cycles').property('value'));	
@@ -47,10 +47,10 @@ var SingleTrig = function(div_id,w,h,amp,phase,freq,frames,cycles,fixed){
 		.attr('y2',y_set[0]);
 
 	var arc = d3.svg.arc()
-    .innerRadius(0)
-    .outerRadius(r/10)
-    .startAngle(Math.PI/2-phase)
-    .endAngle(Math.PI/2-phase)
+	    .innerRadius(0)
+	    .outerRadius(r/10)
+	    .startAngle(Math.PI/2-phase)
+	    .endAngle(Math.PI/2-phase)
 
     var arc_path = svg.append('path')
 	    .attr("d",arc)
@@ -67,12 +67,8 @@ var SingleTrig = function(div_id,w,h,amp,phase,freq,frames,cycles,fixed){
     var plot_scale_x = d3.scale.linear()
 	    .domain([0,frames])
 		.range([x+150+40,w-20]);
+
     var plot = svg.append('g');
-    var points = plot.selectAll('circle').data(y_set);
-		points.enter().append('circle')
-			.attr('cx',function(d,i){return plot_scale_x(i);})
-			.attr('cy',function(d,i){return d;})
-			.attr('r',0)
 
 	var graphF = d3.svg.line()
 		.x(function(d,i){return plot_scale_x(i);})
@@ -206,9 +202,120 @@ var SingleTrig = function(div_id,w,h,amp,phase,freq,frames,cycles,fixed){
 	});
 		// );
 };
+var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
+	var x = w/5, y=h/2;
+	var tick=0;
+	var frame_length=100/6; // 60fps
+	var pos = {x:[],y:[]}; //xy positions of circles; final circle is tracer.
+	var animating = false, finished = false;
+	var pos;
 
-SingleTrig('#small_sin_trace',width,280,280/3,0,1,60,1,true);
-SingleTrig('#small_cos_trace',width,280,280/3,Math.PI/2,1,60,1,true);
-SingleTrig('#sin_interactive',width,280*1.5,280/3,0,1,60,1,false);
+	var amp_scale = 70;
 
+	var ConvertPhase = function(phase){
+		for (var i=0; i<phase.length;i++){
+			phase[i] = phase[i]*Math.PI;
+		}
+		return phase;
+	};
+
+	var ScaleAmp = function(amp,scale) {
+		for (var i = 0; i < amp.length; i++) {
+			amp[i]=amp[i]*scale;
+		};
+		return amp;
+	}
+	var GenXY = function(){
+		pos = {x:[],y:[]};
+
+		for (var i=0; i<=amp.length; i++){
+			pos.x.push([]);
+			pos.y.push([]);
+			for (var j=0; j<=frames;j++){
+				var xval = x;
+				var yval = y;
+				for(var k=0; k<i; k++){	
+					xval+=amp[k]*Math.cos(phase[k]+2*Math.PI*cycles[k]*j/frames);
+					yval-=amp[k]*Math.sin(phase[k]+2*Math.PI*cycles[k]*j/frames);
+				}
+				pos.x[i].push(xval);
+				pos.y[i].push(yval);
+			}
+		}
+	};
+	amp = ScaleAmp(amp,amp_scale);
+	phase = ConvertPhase(phase);
+	GenXY();
+	console.log(pos)
+	var svg = d3.select(div_id).append('svg')
+		.attr('width',w)
+		.attr('height',h);
+
+	var circles=svg.selectAll('circle').data(amp).enter().append('circle')
+		.attr('cx',function(d,i){return pos.x[i][tick]})
+		.attr('cy',function(d,i){return pos.y[i][tick]})
+		.attr('r',function(d,i){return d;});
+
+	var tracer = svg.append('circle')
+		.attr('cx',pos.x[amp.length][tick])
+		.attr('cy',pos.y[amp.length][tick])
+		.attr('r',3);
+    var plot_scale_x = d3.scale.linear()
+	    .domain([0,frames])
+		.range([x+140,w-20]);
+
+    var plot = svg.append('g');
+
+	var graphF = d3.svg.line()
+		.x(function(d,i){return plot_scale_x(i);})
+		.y(function(d){return d;})
+		.interpolate('basis');
+
+	var graph = plot.append('path')
+		.classed('graph',true);
+	
+	var line_y = svg.append('line');
+
+	var Animate = function(){
+		setTimeout(function(){
+			if(!animating){return;}
+			if(tick>frames){
+				tick=0;
+				animating=false;
+				return;
+			}
+			circles
+				.attr('cx',function(d,i){return pos.x[i][tick]})
+				.attr('cy',function(d,i){return pos.y[i][tick]})
+			line_y
+				.attr('x1',pos.x[amp.length][tick])
+				.attr('y1',pos.y[amp.length][tick])
+				.attr('x2',plot_scale_x(tick))
+				.attr('y2',pos.y[amp.length][tick]);
+			tracer
+				.attr('cx',pos.x[amp.length][tick])
+				.attr('cy',pos.y[amp.length][tick])
+
+			graph.attr('d',graphF(pos.y[amp.length].slice(0,tick+1)))
+			tick++;
+			Animate();
+		},frame_length);
+	};
+
+	svg.on("click",function(){
+		if (animating) {
+			animating=false;
+		}
+		else {
+			animating=true;
+			Animate();
+		}
+	});
+};
+
+SingleTrig('#small_sin_trace',width,280,280/3,1,0,60,true);
+SingleTrig('#small_cos_trace',width,280,280/3,1,Math.PI/2,60,true);
+SingleTrig('#sin_interactive',width,280*1.5,280/3,1,0,60,false);
+
+MultiTrig('#sum_threesin',width,280,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,'none');
 })();
