@@ -1,5 +1,4 @@
 (function(){
-	/*The script that brings it all together.*/
 'use strict'
 var width = 840;
 
@@ -262,7 +261,7 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 		.attr('r',3);
     var plot_scale_x = d3.scale.linear()
 	    .domain([0,frames])
-		.range([x+140,w-20]);
+		.range([x,w-20]);
 
     var plot = svg.append('g');
 
@@ -311,11 +310,70 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 			Animate();
 		}
 	});
+
+	return svg;
 };
 
 SingleTrig('#small_sin_trace',width,280,280/3,1,0,60,true);
 SingleTrig('#small_cos_trace',width,280,280/3,1,Math.PI/2,60,true);
 SingleTrig('#sin_interactive',width,280*1.5,280/3,1,0,60,false);
 
-MultiTrig('#sum_threesin',width,280,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,'none');
+var current_slide = 0;
+
+var slides = [
+	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,0],60,'none'),
+	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,1],60,'none').attr('display','none'),
+	MultiTrig('#slideshow',width,280,[1,1],[7,8],[0,0],60,'none').attr('display','none'),
+	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,1/2],60,'none').attr('display','none'),
+	MultiTrig('#slideshow',width,280,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,'none').attr('display','none')
+];
+
+var UpdateCaption = function(){
+	d3.select('#slideshow_prog').text((current_slide+1)+' of '+slides.length);
+	var str;
+	switch(current_slide){
+		case 0:
+			str='Caption for 1';
+			break;
+		case 1:
+			str='Caption for 2';
+			break;
+		case 2:
+			str='Caption for 3';
+			break;
+		case 3:
+			str='Caption for 4';
+			break;
+		default:
+			str='';
+			break;
+	}
+
+	d3.select('#slideshow_caption').text(str);
+
+}
+UpdateCaption()
+
+d3.select('#slideshow_fwd')
+	.on('click',function(){
+		if(current_slide>=slides.length-1){return;}
+		else{
+			slides[current_slide].attr('display','none');
+			current_slide++;
+			slides[current_slide].attr('display','inline');
+			UpdateCaption()
+		}
+	});
+d3.select('#slideshow_bck')
+	.on('click',function(){
+		if(current_slide<=0){return;}
+		else{
+			slides[current_slide].attr('display','none');
+			current_slide--;
+			slides[current_slide].attr('display','inline');
+			UpdateCaption()
+		}
+
+	});
+
 })();
