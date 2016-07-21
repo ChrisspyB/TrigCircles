@@ -34,12 +34,19 @@ table{
 
 .interactive {
 	font-style: italic;
-
+	text-align: center;
 }
 
+.interactive .caption{
+	text-align:center;
+	font-style: italic;
+}
+.button{
+	font-style: normal;
+	font-weight: bold;
+}
 /*svg elements*/
 svg{
-
 }
 circle {
 	fill:none;

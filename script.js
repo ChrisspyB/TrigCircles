@@ -12,7 +12,7 @@ var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 	var tick=0;
 	var frame_length=100/6; // 60fps
 	var x_set = [], y_set = [];
-	var animating = false, finished = false;
+	var animating = false;
 
 
 	/*Note this 0 AND 2pi*/
@@ -21,7 +21,7 @@ var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 		y_set.push(y-amp*Math.sin(phase+2*Math.PI*cycles*i/frames));
 	}
 
-	var svg = d3.select(div_id).append('svg')
+	var svg = d3.select(div_id).insert("svg", ":first-child")
 		.attr('width',w)
 		.attr('height',h);
 
@@ -169,11 +169,8 @@ var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 		var phase =  parseFloat(d3.select(div_id+'_phase').property('value'))*Math.PI;
 		d3.select(div_id).selectAll('label')
 			.data([(amp/100).toFixed(1),cycles.toFixed(1),(phase/Math.PI).toFixed(1)+"\u03C0"])
-			.text(function(d){
-				console.log(d);
-				return d;});
+			.text(function(d){return d;});
 			});
-	// return (
 	svg.on("click",function(){
 		if (animating) {
 			animating=false;
@@ -199,16 +196,19 @@ var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 			Animate();
 		}
 	});
-		// );
 };
-var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
+var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scannable,extrawidth){
+	if (typeof extrawidth === 'undefined') { extrawidth = 0; }
+
+	var scan=false;
 	var x = w/5, y=h/2;
+	x+=xOff;
 	var tick=0;
 	var frame_length=100/6; // 60fps
 	var pos = {x:[],y:[]}; //xy positions of circles; final circle is tracer.
-	var animating = false, finished = false;
+	var animating = false;
 	var pos;
-
+	var scanAmp;
 	var amp_scale = 70;
 
 	var ConvertPhase = function(phase){
@@ -241,19 +241,19 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 				pos.y[i].push(yval);
 			}
 		}
+		scanAmp = pos.y[amp.length].slice(0,frames);
 	};
 	amp = ScaleAmp(amp,amp_scale);
 	phase = ConvertPhase(phase);
 	GenXY();
-	console.log(pos)
-	var svg = d3.select(div_id).append('svg')
-		.attr('width',w)
+	var svg = d3.select(div_id).insert("svg", ":first-child") 
+		.attr('width',w+extrawidth)
 		.attr('height',h);
 
 	var circles=svg.selectAll('circle').data(amp).enter().append('circle')
 		.attr('cx',function(d,i){return pos.x[i][tick]})
 		.attr('cy',function(d,i){return pos.y[i][tick]})
-		.attr('r',function(d,i){return d;});
+		.attr('r',function(d,i){return Math.abs(d);});
 
 	var tracer = svg.append('circle')
 		.attr('cx',pos.x[amp.length][tick])
@@ -261,7 +261,7 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 		.attr('r',3);
     var plot_scale_x = d3.scale.linear()
 	    .domain([0,frames])
-		.range([x,w-20]);
+		.range([x+xDrawOff,w-20]);
 
     var plot = svg.append('g');
 
@@ -274,33 +274,57 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 		.classed('graph',true);
 	
 	var line_y = svg.append('line');
-
 	var Animate = function(){
 		setTimeout(function(){
 			if(!animating){return;}
-			if(tick>frames){
-				tick=0;
-				animating=false;
-				return;
-			}
-			circles
-				.attr('cx',function(d,i){return pos.x[i][tick]})
-				.attr('cy',function(d,i){return pos.y[i][tick]})
-			line_y
-				.attr('x1',pos.x[amp.length][tick])
-				.attr('y1',pos.y[amp.length][tick])
-				.attr('x2',plot_scale_x(tick))
-				.attr('y2',pos.y[amp.length][tick]);
-			tracer
-				.attr('cx',pos.x[amp.length][tick])
-				.attr('cy',pos.y[amp.length][tick])
 
-			graph.attr('d',graphF(pos.y[amp.length].slice(0,tick+1)))
-			tick++;
+			if(!scan){
+				if(tick>frames){
+					tick=0;
+					animating=false;
+					return;
+				}
+				circles
+					.attr('cx',function(d,i){return pos.x[i][tick]})
+					.attr('cy',function(d,i){return pos.y[i][tick]})
+				line_y
+					.attr('x1',pos.x[amp.length][tick])
+					.attr('y1',pos.y[amp.length][tick])
+					.attr('x2',plot_scale_x(tick))
+					.attr('y2',pos.y[amp.length][tick]);
+				tracer
+					.attr('cx',pos.x[amp.length][tick])
+					.attr('cy',pos.y[amp.length][tick])
+
+				graph.attr('d',graphF(pos.y[amp.length].slice(0,tick+1)))
+				tick++;
+			}else{
+				if(tick>=frames){
+					tick=0;
+				}
+				circles
+					.attr('cx',function(d,i){return pos.x[i][tick]})
+					.attr('cy',function(d,i){return pos.y[i][tick]});
+
+				tracer
+					.attr('cx',pos.x[amp.length][tick])
+					.attr('cy',pos.y[amp.length][tick])
+
+
+				line_y
+					.attr('x1',pos.x[amp.length][tick])
+					.attr('y1',pos.y[amp.length][tick])
+					.attr('x2',plot_scale_x(0))//*
+					.attr('y2',pos.y[amp.length][tick]);
+				graph.attr('d',
+					graphF(scanAmp)
+					);
+				scanAmp.push(scanAmp.shift())
+				tick++;
+			}
 			Animate();
 		},frame_length);
 	};
-
 	svg.on("click",function(){
 		if (animating) {
 			animating=false;
@@ -310,49 +334,73 @@ var MultiTrig = function(div_id,w,h,amp,cycles,phase,frames,preset){
 			Animate();
 		}
 	});
-
+	if(scannable){
+		d3.select(div_id+'_scanbox').on("change",function(){
+			tick=0;
+			scan=!scan;
+		scanAmp = pos.y[amp.length].slice(0,frames);
+		})
+	}
 	return svg;
 };
-
 SingleTrig('#small_sin_trace',width,280,280/3,1,0,60,true);
 SingleTrig('#small_cos_trace',width,280,280/3,1,Math.PI/2,60,true);
 SingleTrig('#sin_interactive',width,280*1.5,280/3,1,0,60,false);
 
+var fourier={
+	amp:{
+		sawtooth:[],
+		triangle:[],
+		square:[]
+	},
+	freqs:[], //[1,2,3,...]
+	phases:[] //[0,0,0,...]
+};
+for(var i=1; i<=20; i++){
+	fourier.freqs.push(i);
+	fourier.phases.push(0);
+	fourier.amp.sawtooth.push(-1/i);
+	fourier.amp.square.push(i%2 ? 1/i : 0);
+	var sgn = (i-1)%4 === 0? 1 : -1;
+	fourier.amp.triangle.push(i%2 ? sgn/(i*i) : 0);
+}
+MultiTrig('#fourier_interactive',width,300,60,150,fourier.amp.sawtooth,fourier.freqs,fourier.phases,120,true,0);
+
+
 var current_slide = 0;
-
 var slides = [
-	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,0],60,'none'),
-	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,1],60,'none').attr('display','none'),
-	MultiTrig('#slideshow',width,280,[1,1],[7,8],[0,0],60,'none').attr('display','none'),
-	MultiTrig('#slideshow',width,280,[1,1],[1,1],[0,1/2],60,'none').attr('display','none'),
-	MultiTrig('#slideshow',width,280,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,'none').attr('display','none')
+	MultiTrig('#slideshow',width,300,0,210,[1,1],[1,1],[0,0],60,false),
+	MultiTrig('#slideshow',width,300,0,210,[1,1],[1,1],[0,1],60,false).attr('display','none'),
+	MultiTrig('#slideshow',width,300,0,210,[1,1],[7,8],[0,0],240,true).attr('display','none')
+	// MultiTrig('#slideshow',width,300,[1,1],[1,-1],[0,0],60,false).attr('display','none'),
+	// MultiTrig('#slideshow',width,300,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,false).attr('display','none')
 ];
-
 var UpdateCaption = function(){
 	d3.select('#slideshow_prog').text((current_slide+1)+' of '+slides.length);
 	var str;
 	switch(current_slide){
 		case 0:
-			str='Caption for 1';
+			str='Adding waves of the same frequency and phase results in <b>constructive interference</b>';
 			break;
 		case 1:
-			str='Caption for 2';
+			str='Adding waves of the same frequency but with half-cycle phase difference results in <b>destructive interference</b>';
 			break;
 		case 2:
-			str='Caption for 3';
+			str='Adding waves of different frequencies results in <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves)';
 			break;
 		case 3:
-			str='Caption for 4';
+			str='<b>Caption for 4</b>';
 			break;
 		default:
 			str='';
 			break;
 	}
 
-	d3.select('#slideshow_caption').text(str);
-
-}
+	d3.select('#slideshow_caption').html(str);
+};
 UpdateCaption()
+
+
 
 d3.select('#slideshow_fwd')
 	.on('click',function(){
