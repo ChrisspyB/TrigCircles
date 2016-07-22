@@ -197,9 +197,7 @@ var SingleTrig = function(div_id,w,h,amp,cycles,phase,frames,fixed){
 		}
 	});
 };
-var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scannable,extrawidth){
-	if (typeof extrawidth === 'undefined') { extrawidth = 0; }
-
+var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scannable){
 	var scan=false;
 	var x = w/5, y=h/2;
 	x+=xOff;
@@ -243,11 +241,12 @@ var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scanna
 		}
 		scanAmp = pos.y[amp.length].slice(0,frames);
 	};
-	amp = ScaleAmp(amp,amp_scale);
-	phase = ConvertPhase(phase);
+	amp = ScaleAmp(amp.slice(),amp_scale);
+	phase = ConvertPhase(phase.slice());
 	GenXY();
-	var svg = d3.select(div_id).insert("svg", ":first-child") 
-		.attr('width',w+extrawidth)
+	var svg = d3.select(div_id).insert("svg", ":first-child")
+		.attr('display','none')
+		.attr('width',w)
 		.attr('height',h);
 
 	var circles=svg.selectAll('circle').data(amp).enter().append('circle')
@@ -284,44 +283,37 @@ var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scanna
 					animating=false;
 					return;
 				}
-				circles
-					.attr('cx',function(d,i){return pos.x[i][tick]})
-					.attr('cy',function(d,i){return pos.y[i][tick]})
 				line_y
-					.attr('x1',pos.x[amp.length][tick])
-					.attr('y1',pos.y[amp.length][tick])
 					.attr('x2',plot_scale_x(tick))
-					.attr('y2',pos.y[amp.length][tick]);
-				tracer
-					.attr('cx',pos.x[amp.length][tick])
-					.attr('cy',pos.y[amp.length][tick])
 
 				graph.attr('d',graphF(pos.y[amp.length].slice(0,tick+1)))
-				tick++;
 			}else{
 				if(tick>=frames){
 					tick=0;
 				}
-				circles
-					.attr('cx',function(d,i){return pos.x[i][tick]})
-					.attr('cy',function(d,i){return pos.y[i][tick]});
+				line_y
+					.attr('x2',plot_scale_x(0))//*
 
-				tracer
-					.attr('cx',pos.x[amp.length][tick])
-					.attr('cy',pos.y[amp.length][tick])
+				graph.attr('d',graphF(scanAmp));
 
+				scanAmp.push(scanAmp.shift())
+				
+			}
+			circles
+				.attr('cx',function(d,i){return pos.x[i][tick]})
+				.attr('cy',function(d,i){return pos.y[i][tick]})
+			tracer
+				.attr('cx',pos.x[amp.length][tick])
+				.attr('cy',pos.y[amp.length][tick])
 
 				line_y
 					.attr('x1',pos.x[amp.length][tick])
 					.attr('y1',pos.y[amp.length][tick])
-					.attr('x2',plot_scale_x(0))//*
 					.attr('y2',pos.y[amp.length][tick]);
-				graph.attr('d',
-					graphF(scanAmp)
-					);
-				scanAmp.push(scanAmp.shift())
-				tick++;
-			}
+
+			tick++;
+
+
 			Animate();
 		},frame_length);
 	};
@@ -334,6 +326,7 @@ var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scanna
 			Animate();
 		}
 	});
+
 	if(scannable){
 		d3.select(div_id+'_scanbox').on("change",function(){
 			tick=0;
@@ -341,7 +334,9 @@ var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scanna
 		scanAmp = pos.y[amp.length].slice(0,frames);
 		})
 	}
-	return svg;
+
+
+	return {svg:svg,ani:animating};
 };
 SingleTrig('#small_sin_trace',width,280,280/3,1,0,60,true);
 SingleTrig('#small_cos_trace',width,280,280/3,1,Math.PI/2,60,true);
@@ -356,7 +351,7 @@ var fourier={
 	freqs:[], //[1,2,3,...]
 	phases:[] //[0,0,0,...]
 };
-for(var i=1; i<=20; i++){
+for(var i=1; i<=40; i++){
 	fourier.freqs.push(i);
 	fourier.phases.push(0);
 	fourier.amp.sawtooth.push(-1/i);
@@ -364,21 +359,25 @@ for(var i=1; i<=20; i++){
 	var sgn = (i-1)%4 === 0? 1 : -1;
 	fourier.amp.triangle.push(i%2 ? sgn/(i*i) : 0);
 }
-MultiTrig('#fourier_interactive',width,300,60,150,fourier.amp.sawtooth,fourier.freqs,fourier.phases,120,true,0);
-
-
-var current_slide = 0;
-var slides = [
-	MultiTrig('#slideshow',width,300,0,210,[1,1],[1,1],[0,0],60,false),
-	MultiTrig('#slideshow',width,300,0,210,[1,1],[1,1],[0,1],60,false).attr('display','none'),
-	MultiTrig('#slideshow',width,300,0,210,[1,1],[7,8],[0,0],240,true).attr('display','none')
-	// MultiTrig('#slideshow',width,300,[1,1],[1,-1],[0,0],60,false).attr('display','none'),
-	// MultiTrig('#slideshow',width,300,[1,1/2,1/3,1/4],[1,2,3,4],[0,0,0,0],60,false).attr('display','none')
+var sum_slide = 0;
+var slides_sum = [
+	MultiTrig('#slidesum',width,300,0,210,[1,1],[1,1],[0,0],60,false),
+	MultiTrig('#slidesum',width,300,0,210,[1,1],[1,1],[0,1],60,false),
+	MultiTrig('#slidesum',width,300,0,210,[1,1],[7,8],[0,0],240,true)
 ];
+var fourier_slide = 0;
+var slides_fourier = [
+MultiTrig('#slidefourier',width,300,60,150,fourier.amp.sawtooth,fourier.freqs,fourier.phases,120,true),
+MultiTrig('#slidefourier',width,300,60,150,fourier.amp.triangle,fourier.freqs,fourier.phases,120,true),
+MultiTrig('#slidefourier',width,300,60,150,fourier.amp.square,fourier.freqs,fourier.phases,120,true)
+];
+slides_sum[sum_slide].svg.attr('display','inline');
+slides_fourier[fourier_slide].svg.attr('display','inline');
+
 var UpdateCaption = function(){
-	d3.select('#slideshow_prog').text((current_slide+1)+' of '+slides.length);
+	d3.select('#slidesum_prog').text((sum_slide+1)+' of '+slides_sum.length);
 	var str;
-	switch(current_slide){
+	switch(sum_slide){
 		case 0:
 			str='Adding waves of the same frequency and phase results in <b>constructive interference</b>';
 			break;
@@ -396,29 +395,48 @@ var UpdateCaption = function(){
 			break;
 	}
 
-	d3.select('#slideshow_caption').html(str);
+	d3.select('#slidesum_caption').html(str);
 };
+
 UpdateCaption()
 
-
-
-d3.select('#slideshow_fwd')
+d3.select('#slidesum_fwd')
 	.on('click',function(){
-		if(current_slide>=slides.length-1){return;}
+		if(sum_slide>=slides_sum.length-1){return;}
 		else{
-			slides[current_slide].attr('display','none');
-			current_slide++;
-			slides[current_slide].attr('display','inline');
+			slides_sum[sum_slide].svg.attr('display','none');
+			sum_slide++;
+			slides_sum[sum_slide].svg.attr('display','inline');
 			UpdateCaption()
 		}
 	});
-d3.select('#slideshow_bck')
+d3.select('#slidesum_bck')
 	.on('click',function(){
-		if(current_slide<=0){return;}
+		if(sum_slide<=0){return;}
 		else{
-			slides[current_slide].attr('display','none');
-			current_slide--;
-			slides[current_slide].attr('display','inline');
+			slides_sum[sum_slide].svg.attr('display','none');
+			sum_slide--;
+			slides_sum[sum_slide].svg.attr('display','inline');
+		}
+
+	});
+
+d3.select('#slidefourier_fwd')
+	.on('click',function(){
+		if(fourier_slide>=slides_fourier.length-1){return;}
+		else{
+			slides_fourier[fourier_slide].svg.attr('display','none');
+			fourier_slide++;
+			slides_fourier[fourier_slide].svg.attr('display','inline');
+		}
+	});
+d3.select('#slidefourier_bck')
+	.on('click',function(){
+		if(fourier_slide<=0){return;}
+		else{
+			slides_fourier[fourier_slide].svg.attr('display','none');
+			fourier_slide--;
+			slides_fourier[fourier_slide].svg.attr('display','inline');
 			UpdateCaption()
 		}
 
