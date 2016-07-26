@@ -283,150 +283,191 @@ d3.select("#sin_i_p").on("change",function(){
 	sin_i.rebuild();
 });
 
+var MultiTrig = function(div,x,w,h,a,c,p,frames) {
+	/*
+	Diagram involving a single circle.
+	x: center of circle. w,h: svg dimensions.
+	a,c,p = *ARRAYS* of amplitudes, cycles and phases of circle.
+		(--> draw: a*sin(cx+p))
+	frames = number of frames per cycle.
+	*/
+	// this._div	= div;
+	this._x 		= x;
+	this._y 		= h/2;
+	this._w			= w;
+	this._h 		= h;
+	this._a			= a;
+	this._c			= c;
+	this._p			= p;
+	this._frames	= frames;
+	this._tickmax	= frames; // separate copy of frames to allow updating
 
-//--to be replaced--
+	this._xs; // set of x coords of tracer
+	this._ys; // set of y coords of tracer
 
-var MultiTrig = function(div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scannable){
-	var scan=false;
-	var x = w/5, y=h/2;
-	x+=xOff;
-	var tick=0;
-	var frame_length=100/6; // 60fps
-	var pos = {x:[],y:[]}; //xy positions of circles; final circle is tracer.
-	var animating = false;
-	var pos;
-	var scanAmp;
-	var amp_scale = 70;
+	this.animating	= false;
+	this.tick 		= 0;
+	this.framelength= 100/6; //60fps
 
-	var ConvertPhase = function(phase){
-		for (var i=0; i<phase.length;i++){
-			phase[i] = phase[i]*Math.PI;
-		}
-		return phase;
-	};
+	this.plotoffset	= 200;  
+	this.plotlength	= w-x-30;
+	//new:
+	this._terms = a.length; //no. of terms in series
+	this._pos; //set of each x and y for each circle
+	this._scan = false;
+	this._scan_ys;
 
-	var ScaleAmp = function(amp,scale) {
-		for (var i = 0; i < amp.length; i++) {
-			amp[i]=amp[i]*scale;
-		};
-		return amp;
-	}
-	var GenXY = function(){
-		pos = {x:[],y:[]};
+	var that = this;
 
-		for (var i=0; i<=amp.length; i++){
-			pos.x.push([]);
-			pos.y.push([]);
-			for (var j=0; j<=frames;j++){
-				var xval = x;
-				var yval = y;
-				for(var k=0; k<i; k++){	
-					xval+=amp[k]*Math.cos(phase[k]+2*Math.PI*cycles[k]*j/frames);
-					yval-=amp[k]*Math.sin(phase[k]+2*Math.PI*cycles[k]*j/frames);
-				}
-				pos.x[i].push(xval);
-				pos.y[i].push(yval);
-			}
-		}
-		scanAmp = pos.y[amp.length].slice(0,frames);
-	};
-	amp = ScaleAmp(amp.slice(),amp_scale);
-	phase = ConvertPhase(phase.slice());
-	GenXY();
-	var svg = d3.select(div_id).insert("svg", ":first-child")
-		.attr('display','none')
-		.attr('width',w)
-		.attr('height',h);
+	this._calculate();
 
-	var circles=svg.selectAll('circle').data(amp).enter().append('circle')
-		.attr('cx',function(d,i){return pos.x[i][tick]})
-		.attr('cy',function(d,i){return pos.y[i][tick]})
-		.attr('r',function(d,i){return Math.abs(d);});
+	this.svg = d3.select(div).insert("svg",":first-child")
+		.attr("width",w)
+		.attr("height",h);
 
-	var tracer = svg.append('circle')
-		.attr('cx',pos.x[amp.length][tick])
-		.attr('cy',pos.y[amp.length][tick])
-		.attr('r',3);
-    var plot_scale_x = d3.scale.linear()
-	    .domain([0,frames])
-		.range([x+xDrawOff,w-20]);
+	this._circles = this.svg.selectAll("circle")
+	.data(this._a).enter().append("circle")
+		.attr("cx",function(d,i){return that._pos.x[i][that.tick];})
+		.attr("cy",function(d,i){return that._pos.y[i][that.tick];})
+		.attr("r",function(d){return Math.abs(d);});
 
-    var plot = svg.append('g');
+	this._tracer = this.svg.append("circle")
+ 		.attr('cx',this._xs[this.tick])
+		.attr('cy',this._ys[this.tick])
+		.attr('r',4)
+		.style('fill','black');
 
-	var graphF = d3.svg.line()
-		.x(function(d,i){return plot_scale_x(i);})
+	this._line_y = this.svg.append("line");
+
+	this._xscale = d3.scale.linear()
+	    .domain([0,this._tickmax])
+		.range([this._x+this.plotoffset,this._x+this.plotlength]);
+
+    this._plot = this.svg.append('g');
+
+	this._graphfunc = d3.svg.line()
+		.x(function(d,i){return this._xscale(i);})
 		.y(function(d){return d;})
 		.interpolate('basis');
-
-	var graph = plot.append('path')
+	this._graph = this._plot.append('path')
 		.classed('graph',true);
-	
-	var line_y = svg.append('line');
-	var Animate = function(){
-		setTimeout(function(){
-			if(!animating){return;}
-
-			if(!scan){
-				if(tick>frames){
-					tick=0;
-					animating=false;
-					return;
-				}
-				line_y
-					.attr('x2',plot_scale_x(tick))
-
-				graph.attr('d',graphF(pos.y[amp.length].slice(0,tick+1)))
-			}else{
-				if(tick>=frames){
-					tick=0;
-				}
-				line_y
-					.attr('x2',plot_scale_x(0))//*
-
-				graph.attr('d',graphF(scanAmp));
-
-				scanAmp.push(scanAmp.shift())
-				
-			}
-			circles
-				.attr('cx',function(d,i){return pos.x[i][tick]})
-				.attr('cy',function(d,i){return pos.y[i][tick]})
-			tracer
-				.attr('cx',pos.x[amp.length][tick])
-				.attr('cy',pos.y[amp.length][tick])
-
-				line_y
-					.attr('x1',pos.x[amp.length][tick])
-					.attr('y1',pos.y[amp.length][tick])
-					.attr('y2',pos.y[amp.length][tick]);
-
-			tick++;
 
 
-			Animate();
-		},frame_length);
-	};
-	svg.on("click",function(){
-		if (animating) {
-			animating=false;
-		}
-		else {
-			animating=true;
-			Animate();
-		}
-	});
+	//set up onclick events
+	this.svg.on("click",function(){
+		that.animating=!that.animating;
+		if(that.animating){that._animate();}
+	})
 
-	if(scannable){
-		d3.select(div_id+'_scanbox').on("change",function(){
-			tick=0;
-			scan=!scan;
-		scanAmp = pos.y[amp.length].slice(0,frames);
-		})
-	}
-
-
-	return {svg:svg,ani:animating};
+	if(this.animating){this._animate();}
 };
+MultiTrig.prototype._calculate = function(){
+	this._pos = {x:[],y:[]};
+	for(var i=0; i<=this._terms; i++){
+		this._pos.x.push([]);
+		this._pos.y.push([]);
+		for (var j=0; j<=this._tickmax;j++){
+			var x = this._x;
+			var y = this._y;
+			for(var k=0; k<i; k++){	
+				x+=this._a[k]*Math.cos(this._p[k]+2*Math.PI*this._c[k]*j/this._tickmax);
+				y-=this._a[k]*Math.sin(this._p[k]+2*Math.PI*this._c[k]*j/this._tickmax);
+			}
+			this._pos.x[i].push(x);
+			this._pos.y[i].push(y);
+		}
+	}
+	this._xs = this._pos.x[this._terms];
+	this._ys = this._pos.y[this._terms];
+	this._scan_ys = this._ys.slice(0,-1);
+};
+MultiTrig.prototype.rebuild = function() {
+	//Rebuild the image using new a,c,p,f etc...
+};
+MultiTrig.prototype._animate = function() {
+	var that = this;
+	setTimeout(function(){
+		that.update();
+	},this.framelength);
+};
+MultiTrig.prototype.update = function() {
+	if(!this.animating){return;}
+	var that=this;
+	
+
+	
+	if (this._scan){
+		if(this.tick>=this._tickmax) {//final frame
+			this.tick = 0;
+		}
+		this._line_y.attr('x2',this._xscale(0))//*
+		this._graph.attr('d',this._graphfunc(this._scan_ys));
+
+		this._scan_ys.push(this._scan_ys.shift())
+	}
+	else{
+		if(this.tick>this._tickmax) {//final frame
+			this.tick = 0; 
+			this.animating = false;
+			return;
+		}
+		this._line_y.attr('x2',this._xscale(this.tick));
+
+		this._graph.attr('d',this._graphfunc(this._ys.slice(0,this.tick+1)));
+	}
+	
+	this._circles
+		.attr('cx',function(d,i){return that._pos.x[i][that.tick]})
+		.attr('cy',function(d,i){return that._pos.y[i][that.tick]})
+	this._tracer
+		.attr('cx',this._xs[this.tick])
+		.attr('cy',this._ys[this.tick])
+
+	this._line_y
+		.attr('x1',this._xs[this.tick])
+		.attr('y1',this._ys[this.tick])
+		.attr('y2',this._ys[this.tick]);
+
+	this.tick++;
+	this._animate();
+};
+
+MultiTrig.prototype.setAmps = function(a){
+	//not visible until rebuilt
+	this._a = a;
+};
+MultiTrig.prototype.setCycles = function(c){
+	//not visible until rebuilt
+	this._c = c;
+};
+MultiTrig.prototype.setPhases = function(p){
+	//not visible until rebuilt
+	this._p = p;
+};
+MultiTrig.prototype.setFrames = function(f) {
+	//not visible until rebuilt
+	this._frames = f;
+};
+MultiTrig.prototype.toggleScanning = function(){
+	this.tick = 0;
+	this._scan = !this._scan;
+}
+
+// div,x,w,h,a,c,p,frames
+
+var sum_slide = 0;
+var slides_sum = [
+	new MultiTrig('#slidesum',180,width,300,[70,70],[1,1],[0,0],60),
+	new MultiTrig('#slidesum',180,width,300,[70,70],[1,1],[0,Math.PI],60),
+	new MultiTrig('#slidesum',180,width,300,[70,70],[7,8],[0,0],240)
+];
+slides_sum[1].svg.attr('display','none');
+slides_sum[2].svg.attr('display','none');
+//div_id,w,h,xOff,xDrawOff,amp,cycles,phase,frames,scannable
+
+
+
+
 var fourier={
 	amp:{
 		sawtooth:[],
@@ -439,25 +480,11 @@ var fourier={
 for(var i=1; i<=40; i++){
 	fourier.freqs.push(i);
 	fourier.phases.push(0);
-	fourier.amp.sawtooth.push(-1/i);
-	fourier.amp.square.push(i%2 ? 1/i : 0);
+	fourier.amp.sawtooth.push(-100/i);
+	fourier.amp.square.push(i%2 ? 100/i : 0);
 	var sgn = (i-1)%4 === 0? 1 : -1;
-	fourier.amp.triangle.push(i%2 ? sgn/(i*i) : 0);
+	fourier.amp.triangle.push(i%2 ? 100*sgn/(i*i) : 0);
 }
-var sum_slide = 0;
-var slides_sum = [
-	MultiTrig('#slidesum',width,300,0,210,[1,1],[1,1],[0,0],60,false),
-	MultiTrig('#slidesum',width,300,0,210,[1,1],[1,1],[0,1],60,false),
-	MultiTrig('#slidesum',width,300,0,210,[1,1],[7,8],[0,0],240,true)
-];
-var fourier_slide = 0;
-var slides_fourier = [
-MultiTrig('#slidefourier',width,300,60,150,fourier.amp.sawtooth,fourier.freqs,fourier.phases,120,true),
-MultiTrig('#slidefourier',width,300,60,150,fourier.amp.triangle,fourier.freqs,fourier.phases,120,true),
-MultiTrig('#slidefourier',width,300,60,150,fourier.amp.square,fourier.freqs,fourier.phases,120,true)
-];
-slides_sum[sum_slide].svg.attr('display','inline');
-slides_fourier[fourier_slide].svg.attr('display','inline');
 
 var UpdateCaption = function(){
 	d3.select('#slidesum_prog').text((sum_slide+1)+' of '+slides_sum.length);
@@ -505,6 +532,19 @@ d3.select('#slidesum_bck')
 		}
 
 	});
+
+// div,x,w,h,a,c,p,frames
+	// new MultiTrig('#slidesum',180,width,300,[70,70],[1,1],[0,0],60),
+var fourier_slide = 0;
+var slides_fourier = [
+
+	new MultiTrig('#slidefourier',180,width,300,fourier.amp.sawtooth.slice(),fourier.freqs.slice(),fourier.phases.slice(),120),
+	new MultiTrig('#slidefourier',180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),120),
+	new MultiTrig('#slidefourier',180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),120)
+];
+slides_fourier[1].svg.attr('display','none');
+slides_fourier[2].svg.attr('display','none');
+
 
 d3.select('#slidefourier_fwd')
 	.on('click',function(){
