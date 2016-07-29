@@ -4,11 +4,11 @@ var width = 840;
 
 var SingleTrig = function(div,x,w,h,a,c,p,frames) {
 	/*
-	Diagram involving a single circle.
-	x: center of circle. w,h: svg dimensions.
-	a,c,p = amplitude, cycles and phase of circle.
-		(--> draw: a*sin(cx+p))
-	frames = number of frames per cycle.
+		Diagram involving a single circle.
+		x: center of circle. w,h: svg dimensions.
+		a,c,p = amplitude, cycles and phase of circle.
+			(--> draw: a*sin(cx+p))
+		frames = number of frames per cycle.
 	*/
 	// this._div	= div;
 	this._x 		= x;
@@ -255,13 +255,12 @@ SingleTrig.prototype.setFrames = function(f) {
 
 var MultiTrig = function(div,x,w,h,a,c,p,frames) {
 	/*
-	Diagram involving a single circle.
-	x: center of circle. w,h: svg dimensions.
-	a,c,p = *ARRAYS* of amplitudes, cycles and phases of circle.
-		(--> draw: a*sin(cx+p))
-	frames = number of frames per cycle.
+		Diagram involving sum of circles.
+		x: center of circle. w,h: svg dimensions.
+		a,c,p = *ARRAYS* of amplitudes, cycles and phases of circles.
+			(--> draw: a*sin(cx+p))
+		frames = number of frames per cycle.
 	*/
-	// this._div	= div;
 	this._x 		= x;
 	this._y 		= h/2;
 	this._w			= w;
@@ -275,7 +274,7 @@ var MultiTrig = function(div,x,w,h,a,c,p,frames) {
 	this._xs; // set of x coords of tracer
 	this._ys; // set of y coords of tracer
 
-	this.waitframe 	= false;
+	this._waitframe = false;
 	this.animating	= false;
 	this.tick 		= 0;
 	this.framelength= 100/6; //60fps
@@ -357,10 +356,10 @@ MultiTrig.prototype._calculate = function(){
 
 MultiTrig.prototype._animate = function() {
 	var that = this;
-	if(!this.waitframe){
-		this.waitframe=true; //prevent overlapping animation calls.
+	if(!this._waitframe){
+		this._waitframe=true; //prevent overlapping animation calls.
 		setTimeout(function(){
-			that.waitframe=false;
+			that._waitframe=false;
 			that.update();
 		},this.framelength);
 	}
@@ -442,10 +441,186 @@ MultiTrig.prototype.setScanning = function(bool){
 	if(this.animating){this._animate();}
 }
 
+var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms) {
+	/*
+		Diagrams involving a string of atoms, each with a time varying height
+		described by a sum of circles.
+		Position of atom at (x,t): = a[0]*sin(k[0]x+c[0]t+p[0]) + a[1]...
+		
+		x: center of first atom. w-x = center of final atom.
+		w,h: svg dimensions.
+		a,c,p = *ARRAYS* of amplitudes, cycles and phases of circles.
+			(--> draw: a*sin(cx+p))
+		frames = number of frames per cycle.
+	*/
+	var that = this;
+
+	this._x 		= x; 
+	this._y 		= h/2;
+	this._w			= w;
+	this._h 		= h;
+	this._a			= a;
+	this._c			= c;
+	this._p			= p;
+	this._k 		= k;
+
+	this._maxtick 	= maxtick; //number of ticks, per atom.
+	this._ticksep = 2;
+	
+	this._waitframe = false;
+	this.animating	= false;
+	this.tick 		= 0;
+	this.framelength= 100/6; //60fps
+
+	this.activeAtom = 0; //currently highlighted atom.
+	this._atom_count = atoms;
+	this._atomsep;
+	this._atom_x; //set of x positions for the atoms
+	this._atom_y; //set of y positions for the atoms
+	this._drawatoms = drawAtoms;
+
+	this._terms = a.length;
+
+	//calc
+	this._calculate()
+	//
+	this.svg = d3.select(div).insert("svg",":first-child")
+		.attr("width",w)
+		.attr("height",h);
+	this.svg.append('line')
+		.attr('x1',this._x)
+		.attr('y1',this._y)
+		.attr('x2',this._w-this._x)
+		.attr('y2',this._y);
+	if(drawAtoms){
+
+		this._atomsGroup = this.svg.append("g");
+		this._atoms_pic = this._atomsGroup.selectAll("circle").data(this._atom_x)
+		.enter().append("circle")
+			.attr('cx',function(d,i){return d;})
+			.attr('cy',function(d,i){return that._ys[i][that.tick];})
+			.attr('r',10)
+			.style('fill','#ff2222');
+	}else{
+
+		this._plot = this.svg.append("g");
+
+		this._graphfunc = d3.svg.line()
+			.x(function(d,i){
+				return this._atom_x[i];})
+			.y(function(d){return d;})
+			.interpolate("basis");
+
+		this._graph = this._plot.append("path")
+			.classed("graph",true);
+	}
+
+
+		// console.log(this._graphfunc(this._scan_ys));
+
+
+	this.svg.on("click",function(){
+		that.animating=!that.animating;
+		if(that.animating){that._animate();}
+	})
+	// this.animating=true;
+	if(this.animating){this._animate();}
+};
+
+TravelTrig.prototype._calculate = function() {
+
+	//atom positions:
+
+	var sep = this._atom_count>0? (this._w-2*this._x)/(this._atom_count-1): 1;
+	this._atom_x = [];
+	this._atom_y = [];
+	this._scan_ys = [];
+	for (var i=0; i<this._atom_count; i++){
+		this._atom_x.push(this._x+i*sep);
+	}
+	//circle positions:
+	this._pos = [];
+	this._xs = [];
+	this._ys = [];
+	for (var a=0; a<this._atom_count; a++){// for each atom
+		this._pos.push({x:[],y:[]})
+		for(var i=0; i<=this._terms; i++){ //for each circle
+			this._pos[a].x.push([]);
+			this._pos[a].y.push([]);
+			for (var j=0; j<=this._maxtick;j++){ // for each time
+				var x = this._x;
+				var y = this._y;
+				for(var k=0; k<i; k++){ // for each
+					x+=this._a[k]*Math.cos(this._p[k]+2*Math.PI*(this._c[k]*j/this._maxtick
+						+this._k[k]*(this._atom_x[a]-this._x)/(this._w-2*this._x)));
+					y-=this._a[k]*Math.sin(this._p[k]+2*Math.PI*(this._c[k]*j/this._maxtick
+						+this._k[k]*(this._atom_x[a]-this._x)/(this._w-2*this._x)));
+				}
+				this._pos[a].x[i].push(x);
+				this._pos[a].y[i].push(y);
+			}
+		}
+		this._xs.push(this._pos[a].x[this._terms]);
+		this._ys.push(this._pos[a].y[this._terms]);
+	}
+	this._scan_ys = [];
+	for (var j=0; j<=this._maxtick; j++){
+		this._scan_ys.push([]);
+		for (var a=0; a<this._atom_count; a++){
+			this._scan_ys[j].push(this._ys[a][j]);
+		}
+	}
+};
+
+TravelTrig.prototype._animate = function() {
+	var that = this;
+	if(!this._waitframe){
+		this._waitframe=true; //prevent overlapping animation calls.
+		setTimeout(function(){
+			that._waitframe=false;
+			that.update();
+		},this.framelength);
+	}
+};
+TravelTrig.prototype.update = function() {
+	if(!this.animating){return;}
+	var that=this;
+
+	if(this.tick>=this._maxtick) {
+			this.tick = 0; 
+			// this.animating = false;
+			// return;
+	}
+	
+	if (this._drawatoms){
+
+		this._atoms_pic
+			.attr("cy",function(d,i){
+				return that._ys[i][that.tick];
+				});
+		}
+	else{
+		this._graph.attr("d",this._graphfunc(this._scan_ys[this.tick]));
+		}
+
+
+	this.tick++;
+	this._animate();
+};
+
+//--<testing>--
+//div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
+var travel_simple = new TravelTrig("#travel_simple",100,width,300,[60,60],[1,1],[0.5*7,-0.5*7],[Math.PI,0],50,60,true);
+
+
+
+//-</testing>--
+
+
 //div,x,y,w,h,a,c,p,frames
-var sin_trace = new SingleTrig("#sin_trace",200,840,280,100,1,0,60);
-var cos_trace = new SingleTrig("#cos_trace",200,840,280,100,1,Math.PI/2,60);
-var sin_i = new SingleTrig("#sin_i",200,840,320,
+var sin_trace = new SingleTrig("#sin_trace",200,width,280,100,1,0,60);
+var cos_trace = new SingleTrig("#cos_trace",200,width,280,100,1,Math.PI/2,60);
+var sin_i = new SingleTrig("#sin_i",200,width,320,
 	d3.select("#sin_i_a").property("value"),
 	d3.select("#sin_i_c").property("value"),
 	d3.select("#sin_i_p").property("value")*Math.PI,
