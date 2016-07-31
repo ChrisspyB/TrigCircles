@@ -441,7 +441,7 @@ MultiTrig.prototype.setScanning = function(bool){
 	if(this.animating){this._animate();}
 }
 
-var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms) {
+var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 	/*
 		Diagrams involving a string of atoms, each with a time varying height
 		described by a sum of circles.
@@ -478,6 +478,7 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms) {
 	this._atom_x; //set of x positions for the atoms
 	this._atom_y; //set of y positions for the atoms
 	this._drawatoms = drawAtoms;
+	this._drawpath = drawPath;
 
 	this._terms = a.length;
 
@@ -487,37 +488,33 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms) {
 	this.svg = d3.select(div).insert("svg",":first-child")
 		.attr("width",w)
 		.attr("height",h);
-	this.svg.append('line')
-		.attr('x1',this._x)
-		.attr('y1',this._y)
-		.attr('x2',this._w-this._x)
-		.attr('y2',this._y);
-	if(drawAtoms){
+	this.svg.append("line")
+		.attr("x1",this._x)
+		.attr("y1",this._y)
+		.attr("x2",this._w-this._x)
+		.attr("y2",this._y);
+	
+	this._atomsGroup = this.svg.append("g");
+	this._atoms_pic = this._atomsGroup.selectAll("circle").data(this._atom_x)
+	.enter().append("circle")
+		.attr("cx",function(d,i){return d;})
+		.attr("cy",function(d,i){return that._ys[i][that.tick];})
+		.attr("r",10)
+		.style("fill","#ff2222");
+	this._plot = this.svg.append("g");
 
-		this._atomsGroup = this.svg.append("g");
-		this._atoms_pic = this._atomsGroup.selectAll("circle").data(this._atom_x)
-		.enter().append("circle")
-			.attr('cx',function(d,i){return d;})
-			.attr('cy',function(d,i){return that._ys[i][that.tick];})
-			.attr('r',10)
-			.style('fill','#ff2222');
-	}else{
+	this._graphfunc = d3.svg.line()
+		.x(function(d,i){
+			return this._atom_x[i];})
+		.y(function(d){return d;})
+		.interpolate("basis");
 
-		this._plot = this.svg.append("g");
+	this._graph = this._plot.append("path")
+		.classed("graph",true);
 
-		this._graphfunc = d3.svg.line()
-			.x(function(d,i){
-				return this._atom_x[i];})
-			.y(function(d){return d;})
-			.interpolate("basis");
-
-		this._graph = this._plot.append("path")
-			.classed("graph",true);
+	if(!drawAtoms){
+		this._atoms_pic.style("display","none")
 	}
-
-
-		// console.log(this._graphfunc(this._scan_ys));
-
 
 	this.svg.on("click",function(){
 		that.animating=!that.animating;
@@ -588,31 +585,52 @@ TravelTrig.prototype.update = function() {
 
 	if(this.tick>=this._maxtick) {
 			this.tick = 0; 
-			// this.animating = false;
-			// return;
 	}
 	
 	if (this._drawatoms){
-
 		this._atoms_pic
-			.attr("cy",function(d,i){
-				return that._ys[i][that.tick];
-				});
+			.attr("cy",function(d,i){return that._ys[i][that.tick];});
 		}
-	else{
+	if (this._drawpath){
 		this._graph.attr("d",this._graphfunc(this._scan_ys[this.tick]));
 		}
-
 
 	this.tick++;
 	this._animate();
 };
-
+TravelTrig.prototype.toggleAtoms = function() {
+	this._drawatoms=!this._drawatoms
+	if(this._drawatoms){
+		this._atoms_pic.style("display","inline");
+	}else{
+		this._atoms_pic.style("display","none");
+	}
+};
+TravelTrig.prototype.togglePath = function() {
+	this._drawpath=!this._drawpath
+	if(this._drawpath){
+		this._graph.style("display","inline");
+	}else{
+		this._graph.style("display","none");
+	}
+};
 //--<testing>--
 //div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
-var travel_simple = new TravelTrig("#travel_simple",100,width,300,[60,60],[1,1],[0.5*7,-0.5*7],[Math.PI,0],50,60,true);
+var testing = new TravelTrig("#testing",100,width,300,[60,60],[1,1],[0.5*7,-0.5*7],[Math.PI,0],50,60,true,false);
 
+d3.select("#testing_graph")
+	.style("color",testing._drawpath ? "orange" : "black")
 
+	.on("click",function(){
+		testing.togglePath();
+		d3.select(this).style("color",testing._drawpath ? "orange" : "black");
+	});
+d3.select("#testing_atoms")
+	.style("color",testing._drawatoms ? "orange" : "black")
+	.on("click",function(){
+		testing.toggleAtoms();
+		d3.select(this).style("color",testing._drawatoms ? "orange" : "black");
+	});
 
 //-</testing>--
 
@@ -767,5 +785,7 @@ d3.select("#slidefourier_bck")
 
 
 	});
+
+
 
 })();
