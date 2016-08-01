@@ -234,19 +234,19 @@ SingleTrig.prototype._calculate = function(){
 		this._ys.push(
 			this._y-this._a*Math.sin(this._p+2*Math.PI*this._c*i/this._tickmax));
 	}
-}
+};
 SingleTrig.prototype.setAmp = function(a){
 	//not visible until rebuilt
 	this._a = a;
-}
+};
 SingleTrig.prototype.setCycle = function(c){
 	//not visible until rebuilt
 	this._c = c;
-}
+};
 SingleTrig.prototype.setPhase = function(p){
 	//not visible until rebuilt
 	this._p = p;
-}
+};
 SingleTrig.prototype.setFrames = function(f) {
 	//not visible until rebuilt
 	this._frames = f;
@@ -439,7 +439,7 @@ MultiTrig.prototype.setScanning = function(bool){
 	this.animating = bool;
 	this._scan_ys = this._ys.slice(0,-1);
 	if(this.animating){this._animate();}
-}
+};
 
 var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 	/*
@@ -684,9 +684,70 @@ TravelTrig.prototype.highlight = function(atomid) {
 	}
 };
 //--<testing>--
+
+var Slides = function(div){
+	this._div = div;
+	this._buttons = [];
+
+	this._captions 	= [];
+	this._slides 	= [];
+	this._active 	= 0; //active slide
+
+	this._button_container = d3.select(div).append("div")
+		.classed("button_container",true);
+};
+
+Slides.prototype.addSlides = function(slide_arr, cap_arr) {
+	//hide them too
+	for (var i=0; i<slide_arr.length; i++){
+		this._slides.push(slide_arr[i]);
+		this._captions.push(cap_arr[i]);
+		slide_arr[i].svg.attr("display","none");
+	}
+	return this;
+};
+Slides.prototype.addButton = function(text,func) {
+	var that = this;
+	var id = this._buttons.length-1;
+	this._buttons.push({id:id,text:text,func:func});
+	this._button_container.append("span")
+		.classed("button",true)
+		.text("||"+text+"||")
+		.on("click",function(){func(that)});
+	return this;
+};
+Slides.prototype.setActive = function(slide_id) {
+	this._slides[this._active].svg.attr("display","none");
+	this._active = slide_id;
+	this._slides[this._active].svg.attr("display","inline");
+	//updatecaption
+	return this;
+};
+var testslides = new Slides("#testslides")
+	.addSlides(
+		[
+		new TravelTrig("#testing",100,width,300,[80],[1],[-1],[0],50,120,true,false),
+		new TravelTrig("#testing",100,width,300,[80],[1],[1],[0],50,120,true,false),
+		new TravelTrig("#testing",100,width,300,[50,-40,30],[3,2,1],[0,0,0],[0,0,0],50,120,true,false),
+		new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false)],
+		[
+		"Caption 0",
+		"Caption 1",
+		"Caption 2"]
+	)
+	.setActive(0)
+	.addButton("bck",function(parent){
+		if(parent._active<1){return;}
+		parent.setActive(parent._active-1);
+	})
+	.addButton("fwd",function(parent){
+		if(parent._active>parent._slides.length-2){return;}
+		parent.setActive(parent._active+1);
+	})
+	;
 //div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
-// var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,60,true,false);
-var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
+var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false);
+// var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
 
 d3.select("#testing_graph")
 	.style("color",testing._drawpath ? "orange" : "black")
