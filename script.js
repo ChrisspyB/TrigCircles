@@ -477,9 +477,11 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 	this._atomsep;
 	this._atom_x; //set of x positions for the atoms
 	this._atom_y; //set of y positions for the atoms
-	this._drawatoms = drawAtoms;
-	this._drawpath = drawPath;
+	this._triggerwidth;
 
+	this._drawatoms 	= drawAtoms;
+	this._drawpath		= drawPath;
+	this._drawcircles	= true;
 	this._terms = a.length;
 
 	//calc
@@ -495,12 +497,44 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 		.attr("y2",this._y);
 	
 	this._atomsGroup = this.svg.append("g");
-	this._atoms_pic = this._atomsGroup.selectAll("circle").data(this._atom_x)
+
+	this._atoms = this._atomsGroup.selectAll("circle").data(this._atom_x)
 	.enter().append("circle")
 		.attr("cx",function(d,i){return d;})
 		.attr("cy",function(d,i){return that._ys[i][that.tick];})
 		.attr("r",10)
 		.style("fill","#ff2222");
+
+	this._atom_triggers = this._atomsGroup.selectAll("rect").data(this._atom_x)
+	.enter().append("rect")
+		.attr("height",h)
+		.attr("width",this._triggerwidth)
+		.attr("x",function(d){
+			return d-that._triggerwidth/2;})
+		.attr("y",10)
+		.on("mouseenter",function(d,i){
+			that.highlight(i);
+		})
+		.style("opacity","0");
+
+	this._circleGroup = this.svg.append("g");
+
+	this._circles = this._circleGroup.selectAll("circle")
+	.data(this._a.slice()).enter().append("circle")
+		.attr("cx",function(d,i){return that._atom_x[that.activeAtom]
+			+that._pos[that.activeAtom].x[i][that.tick];})
+		.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];})
+		.attr("r",function(d){return Math.abs(d);})
+		.style("opacity","0.5");
+
+	this._tracer = this.svg.append("circle")
+ 		.attr("cx",this._xs[this.activeAtom][this.tick])
+		.attr("cy",this._ys[this.activeAtom][this.tick])
+		.attr("r",4)
+		.style("fill","black");
+
+	this._line_y = this.svg.append("line");
+
 	this._plot = this.svg.append("g");
 
 	this._graphfunc = d3.svg.line()
@@ -513,7 +547,7 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 		.classed("graph",true);
 
 	if(!drawAtoms){
-		this._atoms_pic.style("display","none")
+		this._atoms.style("display","none")
 	}
 
 	this.svg.on("click",function(){
@@ -532,6 +566,7 @@ TravelTrig.prototype._calculate = function() {
 	this._atom_x = [];
 	this._atom_y = [];
 	this._scan_ys = [];
+	this._triggerwidth = sep;
 	for (var i=0; i<this._atom_count; i++){
 		this._atom_x.push(this._x+i*sep);
 	}
@@ -545,7 +580,7 @@ TravelTrig.prototype._calculate = function() {
 			this._pos[a].x.push([]);
 			this._pos[a].y.push([]);
 			for (var j=0; j<=this._maxtick;j++){ // for each time
-				var x = this._x;
+				var x = 0; //circles to be drawn relative to atoms now.
 				var y = this._y;
 				for(var k=0; k<i; k++){ // for each
 					x+=this._a[k]*Math.cos(this._p[k]+2*Math.PI*(this._c[k]*j/this._maxtick
@@ -587,8 +622,11 @@ TravelTrig.prototype.update = function() {
 			this.tick = 0; 
 	}
 	
+	if (this._drawcircles){
+		this.updateCircles();
+	}
 	if (this._drawatoms){
-		this._atoms_pic
+		this._atoms
 			.attr("cy",function(d,i){return that._ys[i][that.tick];});
 		}
 	if (this._drawpath){
@@ -598,12 +636,32 @@ TravelTrig.prototype.update = function() {
 	this.tick++;
 	this._animate();
 };
+TravelTrig.prototype.updateCircles = function() {
+	// separate function to allow calling when not animating
+	var that = this;
+	this._circles
+			.attr("cx",function(d,i){
+				return that._atom_x[that.activeAtom]
+				+that._pos[that.activeAtom].x[i][that.tick];
+				})
+			.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];});
+
+		this._line_y
+			.attr("y1",this._ys[this.activeAtom][this.tick])
+			.attr("x2",that._atom_x[that.activeAtom]
+				+that._pos[that.activeAtom].x[this._a.length][this.tick])
+			.attr("y2",this._ys[this.activeAtom][this.tick]);
+		this._tracer
+	 		.attr("cx",that._atom_x[that.activeAtom]
+				+that._pos[that.activeAtom].x[this._a.length][this.tick])
+			.attr("cy",this._ys[this.activeAtom][this.tick]);
+};
 TravelTrig.prototype.toggleAtoms = function() {
 	this._drawatoms=!this._drawatoms
 	if(this._drawatoms){
-		this._atoms_pic.style("display","inline");
+		this._atoms.style("display","inline");
 	}else{
-		this._atoms_pic.style("display","none");
+		this._atoms.style("display","none");
 	}
 };
 TravelTrig.prototype.togglePath = function() {
@@ -614,9 +672,21 @@ TravelTrig.prototype.togglePath = function() {
 		this._graph.style("display","none");
 	}
 };
+TravelTrig.prototype.highlight = function(atomid) {
+	//unhighlight
+		d3.select(this._atoms[0][this.activeAtom]).style('fill','#ff2222')
+	//highlight
+	if (atomid<this._atoms[0].length){
+		this.activeAtom = atomid;
+		d3.select(this._atoms[0][this.activeAtom]).style('fill','orange');
+		this._line_y.attr("x1",this._atom_x[this.activeAtom]);
+		this.updateCircles();
+	}
+};
 //--<testing>--
 //div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
-var testing = new TravelTrig("#testing",100,width,300,[60,60],[1,1],[0.5*7,-0.5*7],[Math.PI,0],50,60,true,false);
+// var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,60,true,false);
+var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
 
 d3.select("#testing_graph")
 	.style("color",testing._drawpath ? "orange" : "black")
@@ -647,17 +717,20 @@ var sin_i = new SingleTrig("#sin_i",200,width,320,
 
 var sum_slide = 0;
 var slides_sum = [
+	new MultiTrig("#slidesum",180,width,300,[70,70],[0,1],[Math.PI/2,0],60),
 	new MultiTrig("#slidesum",180,width,300,[70,70],[1,1],[0,0],60),
 	new MultiTrig("#slidesum",180,width,300,[70,70],[1,1],[0,Math.PI],60),
 	new MultiTrig("#slidesum",180,width,300,[70,70],[7,8],[0,0],240)
 ];
 var caps_sum = [
+	"*Linear shift caption here*",
 	"Adding waves of the same frequency and phase results in <b>constructive interference</b>",
 	"Adding waves of the same frequency but with half-cycle phase difference results in <b>destructive interference</b>",
 	"Adding waves of different frequencies results in <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves)"
 ];
 slides_sum[1].svg.attr("display","none");
 slides_sum[2].svg.attr("display","none");
+slides_sum[3].svg.attr("display","none");
 d3.select("#slidesum_caption").html(caps_sum[sum_slide]);
 var fourier={
 	amp:{
@@ -787,5 +860,5 @@ d3.select("#slidefourier_bck")
 	});
 
 
-
+testing.highlight(5);
 })();
