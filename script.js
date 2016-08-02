@@ -479,9 +479,9 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 	this._atom_y; //set of y positions for the atoms
 	this._triggerwidth;
 
-	this._drawatoms 	= drawAtoms;
-	this._drawpath		= drawPath;
-	this._drawcircles	= true;
+	this._drawatoms 	= false;
+	this._drawpath		= false;
+	this._drawcircles	= false;
 	this._terms = a.length;
 
 	//calc
@@ -545,17 +545,22 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 
 	this._graph = this._plot.append("path")
 		.classed("graph",true);
+	this._graph.attr("d",this._graphfunc(this._scan_ys[this.tick]));
 
-	if(!drawAtoms){
-		this._atoms.style("display","none")
+	if(!this._drawatoms) this._atoms.style("display","none");
+	if(!this._drawcircles){
+		this._circleGroup.style("display","none");
+		this._line_y.style("display","none");
+		this._tracer.style("display","none");
 	}
+	if(!this._drawpath) this._graph.style("display","none");
 
 	this.svg.on("click",function(){
 		that.animating=!that.animating;
-		if(that.animating){that._animate();}
+		if(that.animating) that._animate();
 	})
 	// this.animating=true;
-	if(this.animating){this._animate();}
+	if(this.animating) this._animate();
 };
 
 TravelTrig.prototype._calculate = function() {
@@ -640,36 +645,51 @@ TravelTrig.prototype.updateCircles = function() {
 	// separate function to allow calling when not animating
 	var that = this;
 	this._circles
-			.attr("cx",function(d,i){
-				return that._atom_x[that.activeAtom]
-				+that._pos[that.activeAtom].x[i][that.tick];
-				})
-			.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];});
+		.attr("cx",function(d,i){
+			return that._atom_x[that.activeAtom]
+			+that._pos[that.activeAtom].x[i][that.tick];
+			})
+		.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];});
 
-		this._line_y
-			.attr("y1",this._ys[this.activeAtom][this.tick])
-			.attr("x2",that._atom_x[that.activeAtom]
-				+that._pos[that.activeAtom].x[this._a.length][this.tick])
-			.attr("y2",this._ys[this.activeAtom][this.tick]);
-		this._tracer
-	 		.attr("cx",that._atom_x[that.activeAtom]
-				+that._pos[that.activeAtom].x[this._a.length][this.tick])
-			.attr("cy",this._ys[this.activeAtom][this.tick]);
+	this._line_y
+		.attr("y1",this._ys[this.activeAtom][this.tick])
+		.attr("x2",that._atom_x[that.activeAtom]
+			+that._pos[that.activeAtom].x[this._a.length][this.tick])
+		.attr("y2",this._ys[this.activeAtom][this.tick]);
+	this._tracer
+		.attr("cx",that._atom_x[that.activeAtom]
+			+that._pos[that.activeAtom].x[this._a.length][this.tick])
+		.attr("cy",this._ys[this.activeAtom][this.tick]);
 };
-TravelTrig.prototype.toggleAtoms = function() {
-	this._drawatoms=!this._drawatoms
+TravelTrig.prototype.toggleAtoms = function(on) {
+	if(typeof on === "undefined") on = !this._drawatoms;
+	this._drawatoms=on
 	if(this._drawatoms){
 		this._atoms.style("display","inline");
 	}else{
 		this._atoms.style("display","none");
 	}
 };
-TravelTrig.prototype.togglePath = function() {
-	this._drawpath=!this._drawpath
+TravelTrig.prototype.togglePath = function(on) {
+	if(typeof on === "undefined") on = !this._drawpath;
+	this._drawpath=on;
 	if(this._drawpath){
 		this._graph.style("display","inline");
 	}else{
 		this._graph.style("display","none");
+	}
+};
+TravelTrig.prototype.toggleCircles = function(on) {
+	if(typeof on === "undefined") on = !this._drawcircles;
+	this._drawcircles=on;
+	if(this._drawcircles){
+		this._circleGroup.style("display","inline");
+		this._line_y.style("display","inline");
+		this._tracer.style("display","inline");
+	}else{
+		this._circleGroup.style("display","none");
+		this._line_y.style("display","none");
+		this._tracer.style("display","none");
 	}
 };
 TravelTrig.prototype.highlight = function(atomid) {
@@ -685,20 +705,20 @@ TravelTrig.prototype.highlight = function(atomid) {
 };
 //--<testing>--
 
-var Slides = function(div){
+var Slideshow = function(div){
 	this._div = div;
-	this._buttons = [];
+	this._buttons = {};
 
 	this._captions 	= [];
 	this._slides 	= [];
-	this._active 	= 0; //active slide
+	this._active 	= -1; //active slide
 
 	this._button_container = d3.select(div).append("div")
 		.classed("button_container",true);
 };
 
-Slides.prototype.addSlides = function(slide_arr, cap_arr) {
-	//hide them too
+Slideshow.prototype.addSlides = function(slide_arr, cap_arr) {
+	if(slide_arr.length !== cap_arr.length) throw "Unmatched slide/caption";
 	for (var i=0; i<slide_arr.length; i++){
 		this._slides.push(slide_arr[i]);
 		this._captions.push(cap_arr[i]);
@@ -706,47 +726,128 @@ Slides.prototype.addSlides = function(slide_arr, cap_arr) {
 	}
 	return this;
 };
-Slides.prototype.addButton = function(text,func) {
+Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison) {
+	/*
+		name: name of button, text: button text,
+		f_on/off: func called when triggered on/off,
+		ison: does the button begin on? Also defines state on slide change,
+		persist: button state remains unchanged on new slide
+	*/
+	if(typeof f_off === "undefined"){f_off = f_on;}
+	if(typeof ison === "undefined"){ison = false;}
 	var that = this;
-	var id = this._buttons.length-1;
-	this._buttons.push({id:id,text:text,func:func});
+	var id = (this._div+"_button_"+name).slice(1);
+	this._buttons[name] = {
+		id:id,text:text,f_on:f_on,f_off:f_off,ison:ison,onchange:ison};
 	this._button_container.append("span")
 		.classed("button",true)
-		.text("||"+text+"||")
-		.on("click",function(){func(that)});
+		.attr("id",id)
+		.text("| "+text+" |")
+		.on("click",function(){
+			//this = span element; that = slideshow object
+			if (that._buttons[name].ison){
+				f_off(this,that);
+				that._buttons[name].ison = false;
+			}else{
+				f_on(this,that);
+				that._buttons[name].ison = true;
+			}
+		});
 	return this;
 };
-Slides.prototype.setActive = function(slide_id) {
-	this._slides[this._active].svg.attr("display","none");
-	this._active = slide_id;
+Slideshow.prototype.setActive = function(slide_id) {
+	if(this._active<0){//first time
+		this._active = slide_id;
+	}else{
+		for (var name in this._buttons){
+			if (name === "fwd" || name === "bck") continue;
+			var self = d3.select("#"+this._buttons[name].id)[0][0]; //html element of button
+			if (this._buttons[name].ison) { //turn everything off
+				this._buttons[name].f_off(self,this);
+				this._buttons[name].ison = false;
+			}
+		}
+		this._slides[this._active].animating = false;
+		this._slides[this._active].svg.attr("display","none");
+		this._active = slide_id;
+		this._slides[this._active].animating = true;
+		this._slides[this._active]._animate()
+	}
+	
 	this._slides[this._active].svg.attr("display","inline");
+
+	for (var name in this._buttons){
+		if (name === "fwd" || name === "bck") continue;
+		var self = d3.select("#"+this._buttons[name].id)[0][0];
+		if (this._buttons[name].onchange) {
+			this._buttons[name].f_on(self,this);
+			this._buttons[name].ison = true;
+		}
+	}
 	//updatecaption
 	return this;
 };
-var testslides = new Slides("#testslides")
+var testslides = new Slideshow("#testslides")
 	.addSlides(
 		[
-		new TravelTrig("#testing",100,width,300,[80],[1],[-1],[0],50,120,true,false),
-		new TravelTrig("#testing",100,width,300,[80],[1],[1],[0],50,120,true,false),
-		new TravelTrig("#testing",100,width,300,[50,-40,30],[3,2,1],[0,0,0],[0,0,0],50,120,true,false),
-		new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false)],
+		new TravelTrig("#testslides",100,width,300,[80],[1],[-1],[0],50,120,true,false),
+		new TravelTrig("#testslides",100,width,300,[80],[1],[1],[0],50,120,true,false),
+		new TravelTrig("#testslides",100,width,300,[50,-40,30],[3,2,1],[0,0,0],[0,0,0],50,120,true,false),
+		new TravelTrig("#testslides",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false),
+		new TravelTrig("#testslides",100,width,300,[35,35,35],[1,-2,1],[-0.5*7,-0.5*7,2*0.5*7],[2*Math.PI/3,2*2*Math.PI/3,3*2*Math.PI/3],50,120,true,false)
+		],
 		[
 		"Caption 0",
 		"Caption 1",
-		"Caption 2"]
+		"Caption 2",
+		"Caption 3",
+		"Caption 4"]
 	)
-	.setActive(0)
-	.addButton("bck",function(parent){
+	.addButton("atoms","Show Atoms",
+		function(self,parent){
+			parent._slides[parent._active].toggleAtoms(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].toggleAtoms(false);
+			d3.select(self).style("color","black");
+		},
+		true)
+
+	.addButton("graph","Show Graph",
+		function(self,parent){
+			parent._slides[parent._active].togglePath(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].togglePath(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+
+	.addButton("circles","Show Circles",
+		function(self,parent){
+			parent._slides[parent._active].toggleCircles(true);
+			d3.select(self).style("color","orange");
+		},
+		function(self,parent){
+			parent._slides[parent._active].toggleCircles(false);
+			d3.select(self).style("color","black");
+
+		},true
+	)
+	.addButton("bck","bck",function(self,parent){
 		if(parent._active<1){return;}
 		parent.setActive(parent._active-1);
+
 	})
-	.addButton("fwd",function(parent){
+	.addButton("fwd","fwd",function(self,parent){
 		if(parent._active>parent._slides.length-2){return;}
 		parent.setActive(parent._active+1);
 	})
-	;
+	.setActive(4);
 //div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
-var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false);
+var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*2,-0.5*2,],[Math.PI,0],50,120,true,false);
 // var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
 
 d3.select("#testing_graph")
@@ -832,18 +933,18 @@ d3.select("#fourier_terms_label").text(val +" terms");
 slides_fourier[fourier_slide].setTerms(val);
 
 
-var NextSlide = function(div,slides,caps,current,fwd) {
+var NextSlide = function(div,Slideshow,caps,current,fwd) {
 	
-	if (fwd && current<slides.length-1){
+	if (fwd && current<Slideshow.length-1){
 		var next = current+1;
 	}
 	else if(!fwd && current>0){
 		var next = current-1;
 	}else{return current;}
 
-	slides[current].svg.attr("display","none");
-	slides[current].setScanning(false);
-	slides[next].svg.attr("display","inline");
+	Slideshow[current].svg.attr("display","none");
+	Slideshow[current].setScanning(false);
+	Slideshow[next].svg.attr("display","inline");
 	d3.select(div+"_scan").style("color","black");
 	d3.select(div+"_caption").html(caps[next]);
 	//update caption
