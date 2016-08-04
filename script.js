@@ -705,7 +705,7 @@ TravelTrig.prototype.highlight = function(atomid) {
 };
 //--<testing>--
 
-var Slideshow = function(div,autoplay){
+var Slideshow = function(div){
 
 	this.autoplay = false; //auto play next animation on slide *change*
 	// array of functions to call after setting a new active slide
@@ -733,7 +733,7 @@ var Slideshow = function(div,autoplay){
 	},false,false,true);
 	this._fwdbck_container.append("span")
 		.classed("xofy",true)
-		.text("x of y")
+		.text("x of y");
 	this.addButton("fwd","fwd",function(self,parent){
 		if(parent._active>parent._slides.length-2){return;}
 		parent.setActive(parent._active+1);
@@ -805,7 +805,7 @@ Slideshow.prototype.setActive = function(slide_id) {
 
 	this._slides[this._active].svg.attr("display","inline");
 	this._fwdbck_container.select(".xofy").text((this._active+1)+" of "+this._slides.length);
-	this._caption_container.text(this._captions[this._active]);
+	this._caption_container.html(this._captions[this._active]);
 	for (var name in this._buttons){
 		if (name === "fwd" || name === "bck") continue;
 		var self = d3.select("#"+this._buttons[name].id)[0][0];
@@ -882,89 +882,32 @@ var sin_i = new SingleTrig("#sin_i",200,width,320,
 	d3.select("#sin_i_p").property("value")*Math.PI,
 	60);
 
-//
-var sum_slide = 0;
-var slides_sum = [
-	new MultiTrig("#slidesum",180,width,300,[70,70],[0,1],[Math.PI/2,0],60),
-	new MultiTrig("#slidesum",180,width,300,[70,70],[1,1],[0,0],60),
-	new MultiTrig("#slidesum",180,width,300,[70,70],[1,1],[0,Math.PI],60),
-	new MultiTrig("#slidesum",180,width,300,[70,70],[7,8],[0,0],240)
-];
-var caps_sum = [
-	"*Linear shift caption here*",
-	"Adding waves of the same frequency and phase results in <b>constructive interference</b>",
-	"Adding waves of the same frequency but with half-cycle phase difference results in <b>destructive interference</b>",
-	"Adding waves of different frequencies results in <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves)"
-];
-slides_sum[1].svg.attr("display","none");
-slides_sum[2].svg.attr("display","none");
-slides_sum[3].svg.attr("display","none");
-d3.select("#slidesum_caption").html(caps_sum[sum_slide]);
 
-var NextSlide = function(div,Slideshow,caps,current,fwd) {
-	
-	if (fwd && current<Slideshow.length-1){
-		var next = current+1;
-	}
-	else if(!fwd && current>0){
-		var next = current-1;
-	}else{return current;}
+var sumslides = new Slideshow("#sumslides")
+	.addSlides(
+		[	new MultiTrig("#sumslides",180,width,300,[70,70],[0,1],[Math.PI/2,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[0,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[0,Math.PI],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[7,8],[0,0],240)],
+		[
+			"*Linear shift caption here*",
+			"Adding waves of the same frequency and phase results in <b>constructive interference</b>",
+			"Adding waves of the same frequency but with half-cycle phase difference results in <b>destructive interference</b>",
+			"Adding waves of different frequencies results in <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves)"
+		])
+	.addButton("scan","Scan",
+		function(self,parent){
+			parent._slides[parent._active].setScanning(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].setScanning(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+	.setActive(0);
 
-	Slideshow[current].svg.attr("display","none");
-	Slideshow[current].setScanning(false);
-	Slideshow[next].svg.attr("display","inline");
-	d3.select(div+"_scan").style("color","black");
-	d3.select(div+"_caption").html(caps[next]);
-	//update caption
-	return next;
-};
-// on change 
-
-d3.select("#sin_i_a")
-	.on("change",function(){
-		var val = parseFloat(d3.select(this).property("value"));
-		d3.select("#sin_i_a_label").text(val);	
-		sin_i.setAmp(val);
-		sin_i.rebuild();
-	});
-d3.select("#sin_i_c")
-	.on("change",function(){
-		var val = parseFloat(d3.select(this).property("value"));
-		d3.select("#sin_i_c_label").text(val);	
-		sin_i.setCycle(val);
-		sin_i.rebuild();
-	});
-d3.select("#sin_i_p")
-	.on("change",function(){
-		var val = parseFloat(d3.select(this).property("value"));
-		d3.select("#sin_i_p_label").text(val+"\u03C0");	
-		sin_i.setPhase(val*Math.PI);
-		sin_i.rebuild();
-	});
-d3.select("#fourier_terms")
-	.on("change",function(){
-		var val = parseFloat(d3.select(this).property("value"));
-		d3.select("#fourier_terms_label").text(val +" terms");	
-		slides_fourier[fourier_slide].setTerms(val);
-	});
-
-// on click
-d3.select("#slidesum_fwd")
-	.on("click",function(){
-		sum_slide=NextSlide("#slidesum",slides_sum,caps_sum,sum_slide,true);
-	});
-d3.select("#slidesum_bck")
-	.on("click",function(){
-		sum_slide=NextSlide("#slidesum",slides_sum,caps_sum,sum_slide,false);
-	});
-d3.select("#slidesum_scan")
-	.on("click",function(){
-		var slide = slides_sum[sum_slide];
-		slide.setScanning(!slide._scan);
-		d3.select(this).style("color",slide._scan ? "orange" : "black");
-	});
-
-//-fourier 
+ 
 var fourier={
 	amp:{
 		sawtooth:[],
@@ -982,9 +925,6 @@ for(var i=1; i<=50; i++){
 	var sgn = (i-1)%4 === 0? 1 : -1;
 	fourier.amp.triangle.push(i%2 ? 70*sgn/(i*i) : 0);
 }
-
-
-//new fourier
 var fourierslides = new Slideshow("#fourierslides").addSlides(
 	[new MultiTrig("#fourierslides",180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
 	new MultiTrig("#fourierslides",180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
@@ -1038,5 +978,29 @@ var fourierslides = new Slideshow("#fourierslides").addSlides(
 			}
 		}
 );
+
+// on change 
+
+d3.select("#sin_i_a")
+	.on("change",function(){
+		var val = parseFloat(d3.select(this).property("value"));
+		d3.select("#sin_i_a_label").text(val);	
+		sin_i.setAmp(val);
+		sin_i.rebuild();
+	});
+d3.select("#sin_i_c")
+	.on("change",function(){
+		var val = parseFloat(d3.select(this).property("value"));
+		d3.select("#sin_i_c_label").text(val);	
+		sin_i.setCycle(val);
+		sin_i.rebuild();
+	});
+d3.select("#sin_i_p")
+	.on("change",function(){
+		var val = parseFloat(d3.select(this).property("value"));
+		d3.select("#sin_i_p_label").text(val+"\u03C0");	
+		sin_i.setPhase(val*Math.PI);
+		sin_i.rebuild();
+	});
 
 })();
