@@ -253,7 +253,7 @@ SingleTrig.prototype.setFrames = function(f) {
 };
 
 
-var MultiTrig = function(div,x,w,h,a,c,p,frames) {
+var MultiTrig = function(div,x,w,h,a,c,p,frames,terms) {
 	/*
 		Diagram involving sum of circles.
 		x: center of circle. w,h: svg dimensions.
@@ -282,7 +282,7 @@ var MultiTrig = function(div,x,w,h,a,c,p,frames) {
 	this.plotoffset	= 200;  
 	this.plotlength	= w-x-100;
 	//new:
-	this._terms = a.length; //no. of terms in series
+	this._terms = typeof terms === "undefined"? a.length: terms; //no. of terms in series
 	this._pos; //set of each x and y for each circle
 	this._scan = false;
 	this._scan_ys;
@@ -705,10 +705,14 @@ TravelTrig.prototype.highlight = function(atomid) {
 };
 //--<testing>--
 
-var Slideshow = function(div){
+var Slideshow = function(div,autoplay){
+
+	this.autoplay = false; //auto play next animation on slide *change*
+	// array of functions to call after setting a new active slide
+	this.setActiveExtra = []; 
+
 	this._div = div;
 	this._buttons = {};
-
 	this._captions 	= [];
 	this._slides 	= [];
 	this._active 	= -1; //active slide
@@ -793,14 +797,15 @@ Slideshow.prototype.setActive = function(slide_id) {
 		this._slides[this._active].animating = false;
 		this._slides[this._active].svg.attr("display","none");
 		this._active = slide_id;
-		this._slides[this._active].animating = true;
-		this._slides[this._active]._animate()
+		if (this.autoplay){
+			this._slides[this._active].animating = true;
+			this._slides[this._active]._animate()
+		}
 	}
 
 	this._slides[this._active].svg.attr("display","inline");
 	this._fwdbck_container.select(".xofy").text((this._active+1)+" of "+this._slides.length);
 	this._caption_container.text(this._captions[this._active]);
-
 	for (var name in this._buttons){
 		if (name === "fwd" || name === "bck") continue;
 		var self = d3.select("#"+this._buttons[name].id)[0][0];
@@ -809,7 +814,10 @@ Slideshow.prototype.setActive = function(slide_id) {
 			this._buttons[name].ison = true;
 		}
 	}
-	//updatecaption
+	for (var i=0; i<this.setActiveExtra.length; i++){
+		this.setActiveExtra[i](this);
+	}
+
 	return this;
 };
 var testslides = new Slideshow("#testslides")
@@ -861,38 +869,11 @@ var testslides = new Slideshow("#testslides")
 
 		},true
 	)
-	// .addButton("bck","bck",function(self,parent){
-	// 	if(parent._active<1){return;}
-	// 	parent.setActive(parent._active-1);
-
-	// })
-	// .addButton("fwd","fwd",function(self,parent){
-	// 	if(parent._active>parent._slides.length-2){return;}
-	// 	parent.setActive(parent._active+1);
-	// })
 	.setActive(0);
-//div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
-var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*2,-0.5*2,],[Math.PI,0],50,120,true,false);
-// var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
-
-d3.select("#testing_graph")
-	.style("color",testing._drawpath ? "orange" : "black")
-
-	.on("click",function(){
-		testing.togglePath();
-		d3.select(this).style("color",testing._drawpath ? "orange" : "black");
-	});
-d3.select("#testing_atoms")
-	.style("color",testing._drawatoms ? "orange" : "black")
-	.on("click",function(){
-		testing.toggleAtoms();
-		d3.select(this).style("color",testing._drawatoms ? "orange" : "black");
-	});
+testslides.autoplay = true;
 
 //-</testing>--
 
-
-//div,x,y,w,h,a,c,p,frames
 var sin_trace = new SingleTrig("#sin_trace",200,width,280,100,1,0,60);
 var cos_trace = new SingleTrig("#cos_trace",200,width,280,100,1,Math.PI/2,60);
 var sin_i = new SingleTrig("#sin_i",200,width,320,
@@ -901,7 +882,7 @@ var sin_i = new SingleTrig("#sin_i",200,width,320,
 	d3.select("#sin_i_p").property("value")*Math.PI,
 	60);
 
-
+//
 var sum_slide = 0;
 var slides_sum = [
 	new MultiTrig("#slidesum",180,width,300,[70,70],[0,1],[Math.PI/2,0],60),
@@ -919,44 +900,6 @@ slides_sum[1].svg.attr("display","none");
 slides_sum[2].svg.attr("display","none");
 slides_sum[3].svg.attr("display","none");
 d3.select("#slidesum_caption").html(caps_sum[sum_slide]);
-var fourier={
-	amp:{
-		sawtooth:[],
-		triangle:[],
-		square:[]
-	},
-	freqs:[], //[1,2,3,...]
-	phases:[] //[0,0,0,...]
-};
-for(var i=1; i<=50; i++){
-	fourier.freqs.push(i);
-	fourier.phases.push(0);
-	fourier.amp.sawtooth.push(-70/i);
-	fourier.amp.square.push(i%2 ? 70/i : 0);
-	var sgn = (i-1)%4 === 0? 1 : -1;
-	fourier.amp.triangle.push(i%2 ? 70*sgn/(i*i) : 0);
-}
-
-var fourier_slide = 0;
-var slides_fourier = [
-//div,x,w,h,a,c,p,frames
-	new MultiTrig("#slidefourier",180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),180),
-	new MultiTrig("#slidefourier",180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),180),
-	new MultiTrig("#slidefourier",180,width,300,fourier.amp.sawtooth.slice(),fourier.freqs.slice(),fourier.phases.slice(),180)
-];
-var caps_fourier = [
-	"square caption here",
-	"triangle caption here",
-	"sawtooth caption here"
-];
-slides_fourier[1].svg.attr("display","none");
-slides_fourier[2].svg.attr("display","none");
-d3.select("#slidefourier_caption").html(caps_fourier[fourier_slide]);
-
-var val = parseFloat(d3.select("#fourier_terms").property("value"));
-d3.select("#fourier_terms_label").text(val +" terms");	
-slides_fourier[fourier_slide].setTerms(val);
-
 
 var NextSlide = function(div,Slideshow,caps,current,fwd) {
 	
@@ -1021,29 +964,79 @@ d3.select("#slidesum_scan")
 		d3.select(this).style("color",slide._scan ? "orange" : "black");
 	});
 
-d3.select("#slidefourier_scan")
-	.on("click",function(){
-		var slide = slides_fourier[fourier_slide];
-		slide.setScanning(!slide._scan);
-		d3.select(this).style("color",slide._scan ? "orange" : "black");
-	});
-d3.select("#slidefourier_fwd")
-	.on("click",function(){
-		fourier_slide=NextSlide("#slidefourier",slides_fourier,caps_fourier,fourier_slide,true);
-		var val = parseFloat(d3.select("#fourier_terms").property("value"));
-		slides_fourier[fourier_slide].setTerms(val);
-
-	});
-d3.select("#slidefourier_bck")
-	.on("click",function(){
-		fourier_slide=NextSlide("#slidefourier",slides_fourier,caps_fourier,fourier_slide,false);
-
-		var val = parseFloat(d3.select("#fourier_terms").property("value"));
-		slides_fourier[fourier_slide].setTerms(val);
-
-
-	});
+//-fourier 
+var fourier={
+	amp:{
+		sawtooth:[],
+		triangle:[],
+		square:[]
+	},
+	freqs:[], //[1,2,3,...]
+	phases:[] //[0,0,0,...]
+};
+for(var i=1; i<=50; i++){
+	fourier.freqs.push(i);
+	fourier.phases.push(0);
+	fourier.amp.sawtooth.push(-70/i);
+	fourier.amp.square.push(i%2 ? 70/i : 0);
+	var sgn = (i-1)%4 === 0? 1 : -1;
+	fourier.amp.triangle.push(i%2 ? 70*sgn/(i*i) : 0);
+}
 
 
-testing.highlight(5);
+//new fourier
+var fourierslides = new Slideshow("#fourierslides").addSlides(
+	[new MultiTrig("#fourierslides",180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
+	new MultiTrig("#fourierslides",180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
+	new MultiTrig("#fourierslides",180,width,300,fourier.amp.sawtooth.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5)],
+	["Caption Square", "Caption Triangle", "Caption Sawtooth"])
+	.addButton("scan","Scan",
+		function(self,parent){
+			parent._slides[parent._active].setScanning(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].setScanning(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+	.addButton("add","Add Term",
+		function(self,parent){
+			var slide = parent._slides[parent._active];
+			if(slide._terms>=slide._a.length) return;
+			slide.setTerms(slide._terms+1);
+			
+			if(slide._terms>=slide._a.length) d3.select(self).style("color","grey");
+			else if(slide._terms===2) d3.select("#"+parent._buttons["sub"].id).style("color","black");
+		})
+	.addButton("sub","Remove Term",
+		function(self,parent){
+			var slide = parent._slides[parent._active];
+			if(slide._terms<=1) return;
+			slide.setTerms(slide._terms-1);
+
+			if(slide._terms<=1) d3.select(self).style("color","grey");
+			else if(slide._terms===slide._a.length-1) d3.select("#"+parent._buttons["add"].id).style("color","black");
+		})
+	.setActive(0)
+	.setActiveExtra.push(
+		function(parent){
+			var slide = parent._slides[parent._active];
+			switch(slide._terms){
+				case 1: 
+					d3.select("#"+parent._buttons["sub"].id).style("color","grey");
+					break;
+				case 2: 
+					d3.select("#"+parent._buttons["sub"].id).style("color","black");
+					break;
+				case slide._a.length-1: 
+					d3.select("#"+parent._buttons["add"].id).style("color","black");
+					break;
+				case slide._a.length: 
+					d3.select("#"+parent._buttons["add"].id).style("color","grey");
+					break;
+			}
+		}
+);
+
 })();
