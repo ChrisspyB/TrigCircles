@@ -713,8 +713,27 @@ var Slideshow = function(div){
 	this._slides 	= [];
 	this._active 	= -1; //active slide
 
+	this._fwdbck_container = d3.select(div).append("div")
+		.classed("button_container",true);
+
+	this._caption_container = d3.select(div).append("div")
+		.classed("caption",true);
+
 	this._button_container = d3.select(div).append("div")
 		.classed("button_container",true);
+
+	this.addButton("bck","bck",function(self,parent){
+		if(parent._active<1){return;}
+		parent.setActive(parent._active-1);
+
+	},false,false,true);
+	this._fwdbck_container.append("span")
+		.classed("xofy",true)
+		.text("x of y")
+	this.addButton("fwd","fwd",function(self,parent){
+		if(parent._active>parent._slides.length-2){return;}
+		parent.setActive(parent._active+1);
+	},false,false,true);
 };
 
 Slideshow.prototype.addSlides = function(slide_arr, cap_arr) {
@@ -726,20 +745,24 @@ Slideshow.prototype.addSlides = function(slide_arr, cap_arr) {
 	}
 	return this;
 };
-Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison) {
+Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison,fwdbck) {
 	/*
 		name: name of button, text: button text,
 		f_on/off: func called when triggered on/off,
 		ison: does the button begin on? Also defines state on slide change,
-		persist: button state remains unchanged on new slide
+		fwdbck:add to the fwdbck container or standard the button container?
 	*/
-	if(typeof f_off === "undefined"){f_off = f_on;}
+	if(typeof f_off === "undefined" || f_off === false){f_off = f_on;}
 	if(typeof ison === "undefined"){ison = false;}
+	if(typeof fwdbck === "undefined"){fwdbck = false;}
+
 	var that = this;
 	var id = (this._div+"_button_"+name).slice(1);
 	this._buttons[name] = {
 		id:id,text:text,f_on:f_on,f_off:f_off,ison:ison,onchange:ison};
-	this._button_container.append("span")
+
+	var container = fwdbck? this._fwdbck_container:this._button_container
+	container.append("span")
 		.classed("button",true)
 		.attr("id",id)
 		.text("| "+text+" |")
@@ -773,8 +796,10 @@ Slideshow.prototype.setActive = function(slide_id) {
 		this._slides[this._active].animating = true;
 		this._slides[this._active]._animate()
 	}
-	
+
 	this._slides[this._active].svg.attr("display","inline");
+	this._fwdbck_container.select(".xofy").text((this._active+1)+" of "+this._slides.length);
+	this._caption_container.text(this._captions[this._active]);
 
 	for (var name in this._buttons){
 		if (name === "fwd" || name === "bck") continue;
@@ -836,16 +861,16 @@ var testslides = new Slideshow("#testslides")
 
 		},true
 	)
-	.addButton("bck","bck",function(self,parent){
-		if(parent._active<1){return;}
-		parent.setActive(parent._active-1);
+	// .addButton("bck","bck",function(self,parent){
+	// 	if(parent._active<1){return;}
+	// 	parent.setActive(parent._active-1);
 
-	})
-	.addButton("fwd","fwd",function(self,parent){
-		if(parent._active>parent._slides.length-2){return;}
-		parent.setActive(parent._active+1);
-	})
-	.setActive(4);
+	// })
+	// .addButton("fwd","fwd",function(self,parent){
+	// 	if(parent._active>parent._slides.length-2){return;}
+	// 	parent.setActive(parent._active+1);
+	// })
+	.setActive(0);
 //div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms
 var testing = new TravelTrig("#testing",100,width,300,[70,70],[1,1],[0.5*2,-0.5*2,],[Math.PI,0],50,120,true,false);
 // var testing = new TravelTrig("#testing",100,width,300,[50,50,50],[1,1,1],[0,0.5*7,-0.5*7,],[Math.PI,0,0],50,120,true,false);
@@ -950,8 +975,6 @@ var NextSlide = function(div,Slideshow,caps,current,fwd) {
 	//update caption
 	return next;
 };
-
-
 // on change 
 
 d3.select("#sin_i_a")
