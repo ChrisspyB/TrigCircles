@@ -694,11 +694,11 @@ TravelTrig.prototype.toggleCircles = function(on) {
 };
 TravelTrig.prototype.highlight = function(atomid) {
 	//unhighlight
-		d3.select(this._atoms[0][this.activeAtom]).style('fill','#ff2222')
+		d3.select(this._atoms[0][this.activeAtom]).style("fill","#ff2222")
 	//highlight
 	if (atomid<this._atoms[0].length){
 		this.activeAtom = atomid;
-		d3.select(this._atoms[0][this.activeAtom]).style('fill','orange');
+		d3.select(this._atoms[0][this.activeAtom]).style("fill","orange");
 		this._line_y.attr("x1",this._atom_x[this.activeAtom]);
 		this.updateCircles();
 	}
@@ -713,6 +713,7 @@ var Slideshow = function(div){
 
 	this._div = div;
 	this._buttons = {};
+	this._sliders = {};
 	this._captions 	= [];
 	this._slides 	= [];
 	this._active 	= -1; //active slide
@@ -722,6 +723,9 @@ var Slideshow = function(div){
 
 	this._caption_container = d3.select(div).append("div")
 		.classed("caption",true);
+
+	this._slider_container = d3.select(div).append("div")
+		.classed("slider_container",true);
 
 	this._button_container = d3.select(div).append("div")
 		.classed("button_container",true);
@@ -782,6 +786,7 @@ Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison,fwdbck) {
 		});
 	return this;
 };
+
 Slideshow.prototype.setActive = function(slide_id) {
 	if(this._active<0){//first time
 		this._active = slide_id;
@@ -814,27 +819,154 @@ Slideshow.prototype.setActive = function(slide_id) {
 			this._buttons[name].ison = true;
 		}
 	}
+
+	if(this._active===0) d3.select("#"+this._buttons["bck"].id).style("color","grey");
+	else if (this._active===1) d3.select("#"+this._buttons["bck"].id).style("color","black");
+	if (this._active===this._slides.length-2) d3.select("#"+this._buttons["fwd"].id).style("color","black");
+	else if (this._active===this._slides.length-1) d3.select("#"+this._buttons["fwd"].id).style("color","grey");
+
 	for (var i=0; i<this.setActiveExtra.length; i++){
 		this.setActiveExtra[i](this);
 	}
 
 	return this;
 };
-var testslides = new Slideshow("#testslides")
+
+var sin_trace = new SingleTrig("#sin_trace",200,width,280,100,1,0,60);
+var cos_trace = new SingleTrig("#cos_trace",200,width,280,100,1,Math.PI/2,60);
+var sin_i = new SingleTrig("#sin_i",200,width,320,
+	d3.select("#sin_i_a").property("value"),
+	d3.select("#sin_i_c").property("value"),
+	d3.select("#sin_i_p").property("value")*Math.PI,
+	60);
+
+var sumslides = new Slideshow("#sumslides")
+	.addSlides(
+		[	
+			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[0,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[Math.PI,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[1,2],[0,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70/5],[1,2],[0,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70/5],[2,1],[0,0],60),
+			new MultiTrig("#sumslides",180,width,300,[70,70],[7,8],[0,0],240)],
+		[
+			"<span class=\"eqn\">Sin(x)+Sin(x) = 2Sin(x)</span>.<br>Adding waves of the same frequency and phase results in <b>complete constructive interference</b>.",
+			"<span class=\"eqn\">Sin(x+pi)+Sin(x) = 0</span>.<br>Adding waves of the same frequency but with half-cycle phase difference results in <b>complete destructive interference</b>",
+			"<span class=\"eqn\">Sin(x)+Sin(2x)</span>.<br>In general, waves will interfere both constructively and destructively. Here, two waves of different frequencies are added - notice how there are are two oscillations of the outer circle for every one oscillation of the inner circle.",
+			"<span class=\"eqn\">Sin(x)+0.2Sin(2x)</span>.<br>The greater the amplitude, the more it will affect the overall shape. Notice how this looks more like sin(x) than sin(2x)...",
+			"<span class=\"eqn\">Sin(2x)+0.2Sin(x)</span>.<br>...whereas this looks more like sin(2x)",
+			"<span class=\"eqn\">Sin(7x)+Sin(8x)</span>.<br>Adding waves of similar (but different) frequencies results in visible <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves). I recommend hitting the <b>SCAN</b> button to see the envelope."
+		])
+	.addButton("scan","SCAN",
+		function(self,parent){
+			parent._slides[parent._active].setScanning(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].setScanning(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+	.setActive(0);
+
+var fourier={
+	amp:{
+		sawtooth:[],
+		triangle:[],
+		square:[]
+	},
+	freqs:[], //[1,2,3,...]
+	phases:[] //[0,0,0,...]
+};
+for(var i=1; i<=50; i++){
+	fourier.freqs.push(i);
+	fourier.phases.push(0);
+	fourier.amp.sawtooth.push(-70/i);
+	fourier.amp.square.push(i%2 ? 70/i : 0);
+	var sgn = (i-1)%4 === 0? 1 : -1;
+	fourier.amp.triangle.push(i%2 ? 70*sgn/(i*i) : 0);
+}
+var fourierslides = new Slideshow("#fourierslides").addSlides(
+	[	new MultiTrig("#fourierslides",180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
+		new MultiTrig("#fourierslides",180,width,300,fourier.amp.sawtooth.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
+		new MultiTrig("#fourierslides",180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5)
+		],
+	[	"<span class=\"eqn\">sin(x) + 0 + sin(3x)/3 + 0 + sin(5x)/5 + ...</span><br>A <b>square wave</b>. Every other term is zero, so a new circle is only visible every two terms.", 
+		"<span class=\"eqn\">sin(x) - sin(2x)/2 - sin(3x)/3 - sin(4x)/4 - ...</span><br>A <b>sawtooth wave</b>.",
+		"A <b>triangle wave</b>. Like the square wave, every other term is zero."
+	])
+	.addButton("scan","SCAN",
+		function(self,parent){
+			parent._slides[parent._active].setScanning(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].setScanning(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+	.addButton("add","Add Term",
+		function(self,parent){
+			var slide = parent._slides[parent._active];
+			if(slide._terms>=slide._a.length) return;
+			slide.setTerms(slide._terms+1);
+			if(slide._terms>=slide._a.length) d3.select(self).style("color","grey");	
+			else if(slide._terms===2) d3.select("#"+parent._buttons["sub"].id).style("color","black");
+		})
+	.addButton("sub","Remove Term",
+		function(self,parent){
+			var slide = parent._slides[parent._active];
+			if(slide._terms<=1) return;
+			slide.setTerms(slide._terms-1);
+			if(slide._terms<=1) d3.select(self).style("color","grey");
+			else if(slide._terms===slide._a.length-1) d3.select("#"+parent._buttons["add"].id).style("color","black");
+		})
+	.setActive(0)
+	.setActiveExtra.push(
+		function(parent){
+			var slide = parent._slides[parent._active];
+			//Update colors of sub/add buttons
+			switch(slide._terms){
+				case 1: 
+					d3.select("#"+parent._buttons["sub"].id).style("color","grey");
+					break;
+				case 2: 
+					d3.select("#"+parent._buttons["sub"].id).style("color","black");
+					break;
+				case slide._a.length-1: 
+					d3.select("#"+parent._buttons["add"].id).style("color","black");
+					break;
+				case slide._a.length: 
+					d3.select("#"+parent._buttons["add"].id).style("color","grey");
+					break;
+			}
+		}
+	);
+
+var travelslides = new Slideshow("#travelslides")
 	.addSlides(
 		[
-		new TravelTrig("#testslides",100,width,300,[80],[1],[-1],[0],50,120,true,false),
-		new TravelTrig("#testslides",100,width,300,[80],[1],[1],[0],50,120,true,false),
-		new TravelTrig("#testslides",100,width,300,[50,-40,30],[3,2,1],[0,0,0],[0,0,0],50,120,true,false),
-		new TravelTrig("#testslides",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false),
-		new TravelTrig("#testslides",100,width,300,[35,35,35],[1,-2,1],[-0.5*7,-0.5*7,2*0.5*7],[2*Math.PI/3,2*2*Math.PI/3,3*2*Math.PI/3],50,120,true,false)
+		new TravelTrig("#travelslides",100,width,300,[70],[1],[0],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70],[0],[1],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70],[1],[1],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70],[-1],[1],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70],[-2],[1],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70],[-1],[2],[0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70,70],[-1,-2],[3,3],[0,0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false),
+		new TravelTrig("#travelslides",100,width,300,[35,35,35],[1,-2,1],[-0.5*7,-0.5*7,2*0.5*7],[2*Math.PI/3,2*2*Math.PI/3,3*2*Math.PI/3],50,120,true,false)
 		],
 		[
-		"Caption 0",
-		"Caption 1",
-		"Caption 2",
-		"Caption 3",
-		"Caption 4"]
+			"<span class=\"eqn\">sin(t)</span><br>With no x-dependence, all atoms are at the same height, regardless of position.",
+			"<span class=\"eqn\">sin(x)</span><br>With no t-dependence, the atoms' heights depend only on position, and cannot change with time.",
+			"<span class=\"eqn\">sin(x + t)</span><br>Each atom's height varies sinusoidally with time. At the same time, each have a phase offset depending on their x-position.",
+			"<span class=\"eqn\">sin(x - t)</span><br>Changing the sign of either x or t reverses the direction of the wave.",
+			"<span class=\"eqn\">sin(x - 2t)</span><br>Increasing the temporal frequency increases how many cycles are observed per unit time. Here we have twice as many oscillations per second as before.",
+			"<span class=\"eqn\">sin(2x - t)</span><br> Increasing the spatial frequency increases how many cycles are observed within a certain space. Here we have twice as many oscillations within the same space as before.",
+			"<span class=\"eqn\">sin(3x - t) + sin(3x - 2t)</span><br>Just like before, travelling waves interfere with each other to produce new patterns.",
+			"<span class=\"eqn\">sin(3.5x + t) + sin(-3.5x + t)</span><br>When two identical waves travelling in opposite directions interfere, they produce a standing wave: they interfere destructively at some points, and constructively at others.",
+			"And of course, we can model the interference of more than two travelling waves."
+		]
 	)
 	.addButton("atoms","Show Atoms",
 		function(self,parent){
@@ -869,116 +1001,8 @@ var testslides = new Slideshow("#testslides")
 
 		},true
 	)
-	.setActive(0);
-testslides.autoplay = true;
-
-//-</testing>--
-
-var sin_trace = new SingleTrig("#sin_trace",200,width,280,100,1,0,60);
-var cos_trace = new SingleTrig("#cos_trace",200,width,280,100,1,Math.PI/2,60);
-var sin_i = new SingleTrig("#sin_i",200,width,320,
-	d3.select("#sin_i_a").property("value"),
-	d3.select("#sin_i_c").property("value"),
-	d3.select("#sin_i_p").property("value")*Math.PI,
-	60);
-
-
-var sumslides = new Slideshow("#sumslides")
-	.addSlides(
-		[	new MultiTrig("#sumslides",180,width,300,[70,70],[0,1],[Math.PI/2,0],60),
-			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[0,0],60),
-			new MultiTrig("#sumslides",180,width,300,[70,70],[1,1],[0,Math.PI],60),
-			new MultiTrig("#sumslides",180,width,300,[70,70],[7,8],[0,0],240)],
-		[
-			"*Linear shift caption here*",
-			"Adding waves of the same frequency and phase results in <b>constructive interference</b>",
-			"Adding waves of the same frequency but with half-cycle phase difference results in <b>destructive interference</b>",
-			"Adding waves of different frequencies results in <b>beating</b>, with the amplitudes bound by an oscillating envelope (whose frequency is the difference of the the two interfering waves)"
-		])
-	.addButton("scan","Scan",
-		function(self,parent){
-			parent._slides[parent._active].setScanning(true);
-			d3.select(self).style("color","orange");
-		}, 
-		function(self,parent){
-			parent._slides[parent._active].setScanning(false);
-			d3.select(self).style("color","black");
-		},
-		false)
-	.setActive(0);
-
- 
-var fourier={
-	amp:{
-		sawtooth:[],
-		triangle:[],
-		square:[]
-	},
-	freqs:[], //[1,2,3,...]
-	phases:[] //[0,0,0,...]
-};
-for(var i=1; i<=50; i++){
-	fourier.freqs.push(i);
-	fourier.phases.push(0);
-	fourier.amp.sawtooth.push(-70/i);
-	fourier.amp.square.push(i%2 ? 70/i : 0);
-	var sgn = (i-1)%4 === 0? 1 : -1;
-	fourier.amp.triangle.push(i%2 ? 70*sgn/(i*i) : 0);
-}
-var fourierslides = new Slideshow("#fourierslides").addSlides(
-	[new MultiTrig("#fourierslides",180,width,300,fourier.amp.square.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
-	new MultiTrig("#fourierslides",180,width,300,fourier.amp.triangle.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5),
-	new MultiTrig("#fourierslides",180,width,300,fourier.amp.sawtooth.slice(),fourier.freqs.slice(),fourier.phases.slice(),180,5)],
-	["Caption Square", "Caption Triangle", "Caption Sawtooth"])
-	.addButton("scan","Scan",
-		function(self,parent){
-			parent._slides[parent._active].setScanning(true);
-			d3.select(self).style("color","orange");
-		}, 
-		function(self,parent){
-			parent._slides[parent._active].setScanning(false);
-			d3.select(self).style("color","black");
-		},
-		false)
-	.addButton("add","Add Term",
-		function(self,parent){
-			var slide = parent._slides[parent._active];
-			if(slide._terms>=slide._a.length) return;
-			slide.setTerms(slide._terms+1);
-			
-			if(slide._terms>=slide._a.length) d3.select(self).style("color","grey");
-			else if(slide._terms===2) d3.select("#"+parent._buttons["sub"].id).style("color","black");
-		})
-	.addButton("sub","Remove Term",
-		function(self,parent){
-			var slide = parent._slides[parent._active];
-			if(slide._terms<=1) return;
-			slide.setTerms(slide._terms-1);
-
-			if(slide._terms<=1) d3.select(self).style("color","grey");
-			else if(slide._terms===slide._a.length-1) d3.select("#"+parent._buttons["add"].id).style("color","black");
-		})
 	.setActive(0)
-	.setActiveExtra.push(
-		function(parent){
-			var slide = parent._slides[parent._active];
-			switch(slide._terms){
-				case 1: 
-					d3.select("#"+parent._buttons["sub"].id).style("color","grey");
-					break;
-				case 2: 
-					d3.select("#"+parent._buttons["sub"].id).style("color","black");
-					break;
-				case slide._a.length-1: 
-					d3.select("#"+parent._buttons["add"].id).style("color","black");
-					break;
-				case slide._a.length: 
-					d3.select("#"+parent._buttons["add"].id).style("color","grey");
-					break;
-			}
-		}
-);
-
+	.autoplay = true;
 // on change 
 
 d3.select("#sin_i_a")

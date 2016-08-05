@@ -25,13 +25,16 @@ table{
 	margin:40px auto 100px auto;
 
 }
-#eqn{
+.eqn{
 	font-family: "Times New Roman", sans-serif;
 	letter-spacing: 1px;
 	font-weight: bold;
 	font-style: italic;
 }
-
+.precaption {
+	text-align:center;
+	font-style: italic;
+}
 .interactive {
 	font-style: italic;
 	text-align: center;

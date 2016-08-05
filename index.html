@@ -14,11 +14,13 @@
 	*WORK IN PROGRESS
 	<div id="circle_sin">
 		<h2>Sinusoids and Circles</h2>
-		Consider the unit circle. Starting from the positive x-axis and tracing the circle, plotting the y coordinate as a function of the polar angle t, we produce a sine wave of period 2pi i.e. <span id="eqn">y = sin(t)</span>.<br>
-		<div class ="interactive" id="sin_trace">#small_sin_trace</div>
-		If were to instead start tracing 90 degrees later i.e. from the positive y-axis we see that the same procedure produces a cosine wave. This isn't surprising, given that <span id="eqn">cos(t) = sin(t+90)</span>.<br>
-		<div class ="interactive" id="cos_trace">#small_cos_trace</div>
-		By varying the parameters of the circle, we can plot arbitrary sinusoidal functions <span id="eqn">Asin(t+&alpha;)</span>. Notice how varying the radius, trace speed and starting position affects the amplitude, frequency and phase-offset of the resulting sinusoid.<br>
+		Every sinusoidal function can be represented by a corresponding circle. By tracing the our height as we travel along the circumference of a circle, we produce a sine wave of period 2&pi;, <span class="eqn">sin(x)</span>.<br>
+		<div class = "precaption">Click on the diagram to draw a wave.</div>
+		<div class ="interactive" id="sin_trace"></div>
+		If were to instead start tracing from the top of the circle (90&deg; or 0.5&pi; later) the same procedure produces a cosine wave, <span class="eqn">cos(x)</span>.<br>
+		<div class ="interactive" id="cos_trace"></div>
+		Where we start drawing the wave is its <b>initial phase</b>. The above diagram demonstrates that <span class="eqn">cos(x)</span> and <span class="eqn">sin(x)</span> have a phase difference of 0.5&pi; radians i.e. <span class="eqn">cos(x) = sin(x+0.5&pi;)</span>.<br><br>
+		By adjusting the circle's radius, our starting position and how quickly we trace the circle we can plot arbitrary sinusoidal functions of the form <span class="eqn">Asin(&omega;x+&phi;)</span>. Fiddle with the sliders below, and watch how it affects both the circle and waveform.<br>
 		<div class ="interactive" id="sin_i">
 			<table border="0">
 				<tr>
@@ -36,39 +38,44 @@
 					</td>
 				</tr>
 				<tr>
-					<td>Amplitude</td>
-					<td>Frequency</td>
-					<td>Phase Offset</td>
+					<td>Amplitude (A)</td>
+					<td>Frequency (&omega;)</td>
+					<td>Initial Phase (&phi;)</td>
 				</tr>
 			</table>
 		</div>
 	</div>
 	<div id ="circle_sum">
 		<h2>Sums of Circles</h2>
-		We have just shown that an arbitrary sin function is represented by a circle when considering <span id="eqn">y(t)</span>. It follows that a sum of two sine waves can be represented by a corresponding sum of circles.<br>
-		<div class ="interactive" id="sumslides">#sumslides</div>
+		If an arbitrary sine function has a corresponding circle, it follows that a sum of two sine waves can be represented by a corresponding sum of circles.<br>
+		<div class = "precaption">Click to draw one period, hit <b>SCAN</b> to keep drawing.</div>
+		<div class ="interactive" id="sumslides"></div>
 	</div>
 	
 	<div id="fourier_series">
 		<h2>Fourier Series</h2>
-		From fourier analysis, it turns out that any <i>well-behaved</i> periodic function can be expressed as an infinte sum of sin and cos functions of different amplitudes and frequencies. As such, any periodic function can be visualised with an infinte number of circles!
-		We can't really draw an infinte number of circles, but we can approximate by drawing the first few in the series.
-		<div class ="interactive" id="fourierslides">#fourierslides</div>
+		As it turns out, any periodic function can be expressed as an infinite sum of sin and cos functions of different amplitudes and frequencies. As such, any periodic function can be visualised with an infinite number of circles!
+		We can't really draw an infinite number of circles, but we can approximate by drawing the first few in the series.
+		<div class = "precaption">Try adding terms while in <b>SCAN</b> mode and watch as the waveform begins to take shape.</div>
+
+		<div class ="interactive" id="fourierslides"></div>
 	</div>
 	<div id="travelling">
 		<h2>Travelling Waves</h2>
-		So far we have only looked at functions of a single variable (eg space or time, but never both).
-		Imagine we're watching water waves in a transparant bowl from a side view. We can model the change in height of the wave across the bowl at a single point in time OR how the height changes with time at a single point in the wave.
-		We cannot fully model what we see in the world without both spatial and temporal considerations.<br>
-		*explanation of next diag*<br>
-
-		<div class ="interactive" id="testslides">#testslides</div>
-
+		So far we have only considered functions of a single variable, <span class="eqn">x</span>. Our circles can model how a single atom's position varies with time, or a how vibration in a string varies with position. If we want to consider waves which vary with time and position, a travelling wave, each point in space needs to have its own set of circles which oscillate in time.<br>
+		<div class = "precaption">Click to play/pause. Move the mouse to highlight atoms.</div>
+		<div class ="interactive" id="travelslides"></div>
+	</div>
+	<div id="sandbox">
+		<h2>Sandbox (build your own)</h2>
+		To be implemented...
 	</div>
 	<div id ="acknowledge">
-		<h2>#Acknowledgements and related</h2>
-		<i>This page was created primarily as an exercise in building interactive diagrams and to practice svg manipulation and d3.js. The interactives are home-made but are based on commonly used diagrams and .gifs found around the web.</i><br>
+		<h2></h2>
+		<i>This page was created primarily as an exercise in building interactive diagrams and to practice svg manipulation with d3.js.
+		<br>
 		<a href="https://github.com/ChrisspyB/demo-sine">GitHub Link.</a>
+		</i>
 	</div>
 </div>
 
