@@ -905,44 +905,23 @@ var fourierslides = new Slideshow("#fourierslides").addSlides(
 			d3.select(self).style("color","black");
 		},
 		false)
-	.addButton("add","Add Term",
-		function(self,parent){
-			var slide = parent._slides[parent._active];
-			if(slide._terms>=slide._a.length) return;
-			slide.setTerms(slide._terms+1);
-			if(slide._terms>=slide._a.length) d3.select(self).style("color","grey");	
-			else if(slide._terms===2) d3.select("#"+parent._buttons["sub"].id).style("color","black");
-		})
-	.addButton("sub","Remove Term",
-		function(self,parent){
-			var slide = parent._slides[parent._active];
-			if(slide._terms<=1) return;
-			slide.setTerms(slide._terms-1);
-			if(slide._terms<=1) d3.select(self).style("color","grey");
-			else if(slide._terms===slide._a.length-1) d3.select("#"+parent._buttons["add"].id).style("color","black");
-		})
-	.setActive(0)
-	.setActiveExtra.push(
-		function(parent){
-			var slide = parent._slides[parent._active];
-			//Update colors of sub/add buttons
-			switch(slide._terms){
-				case 1: 
-					d3.select("#"+parent._buttons["sub"].id).style("color","grey");
-					break;
-				case 2: 
-					d3.select("#"+parent._buttons["sub"].id).style("color","black");
-					break;
-				case slide._a.length-1: 
-					d3.select("#"+parent._buttons["add"].id).style("color","black");
-					break;
-				case slide._a.length: 
-					d3.select("#"+parent._buttons["add"].id).style("color","grey");
-					break;
-			}
-		}
-	);
+	.setActive(0);
 
+d3.select("#fourierslides").append("input")
+	.attr("type","range")
+	.attr("max",50)
+	.attr("min",1)
+	.attr("value",5);
+d3.select("#fourierslides").append("span")
+	.attr("class","slider_label")
+	.text("5 terms");
+fourierslides.setActiveExtra.push(
+	function(parent){
+		var terms = parent._slides[parent._active]._terms;
+		d3.select("#fourierslides .slider_label").text(terms+" terms");
+		d3.select("#fourierslides input").attr("value",terms);
+	}
+);
 var travelslides = new Slideshow("#travelslides")
 	.addSlides(
 		[
@@ -1002,9 +981,9 @@ var travelslides = new Slideshow("#travelslides")
 		},true
 	)
 	.setActive(0)
-	.autoplay = true;
-// on change 
+travelslides.autoplay = true;
 
+// on change 
 d3.select("#sin_i_a")
 	.on("change",function(){
 		var val = parseFloat(d3.select(this).property("value"));
@@ -1026,5 +1005,9 @@ d3.select("#sin_i_p")
 		sin_i.setPhase(val*Math.PI);
 		sin_i.rebuild();
 	});
-
+d3.select("#fourierslides input")
+	.on("change",function(){
+		fourierslides._slides[fourierslides._active].setTerms(this.value);
+		d3.select("#fourierslides .slider_label").text(this.value+" terms");
+	})
 })();
