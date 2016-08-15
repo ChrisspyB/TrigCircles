@@ -368,8 +368,6 @@ MultiTrig.prototype.update = function() {
 	if(!this.animating){return;}
 	var that=this;
 	
-
-	
 	if (this._scan){
 		if(this.tick>=this._tickmax) {//final frame
 			this.tick = 0;
@@ -441,7 +439,7 @@ MultiTrig.prototype.setScanning = function(bool){
 	if(this.animating){this._animate();}
 };
 
-var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
+var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick) {
 	/*
 		Diagrams involving a string of atoms, each with a time varying height
 		described by a sum of circles.
@@ -483,7 +481,7 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 	this._drawpath		= false;
 	this._drawcircles	= false;
 	this._terms = a.length;
-
+	this.rebuilding = false;
 	//calc
 	this._calculate()
 	//
@@ -519,8 +517,8 @@ var TravelTrig = function(div,x,w,h,a,c,k,p,atoms,maxtick,drawAtoms,drawPath) {
 
 	this._circleGroup = this.svg.append("g");
 
-	this._circles = this._circleGroup.selectAll("circle")
-	.data(this._a.slice()).enter().append("circle")
+	this._circles = this._circleGroup.selectAll("circle").data(this._a.slice())
+	this._circles.enter().append("circle")
 		.attr("cx",function(d,i){return that._atom_x[that.activeAtom]
 			+that._pos[that.activeAtom].x[i][that.tick];})
 		.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];})
@@ -639,11 +637,24 @@ TravelTrig.prototype.update = function() {
 		}
 
 	this.tick++;
+	if(this.rebuilding) this.rebuilding = false;
 	this._animate();
 };
 TravelTrig.prototype.updateCircles = function() {
 	// separate function to allow calling when not animating
 	var that = this;
+	if(this.rebuilding){
+		this._circles = this._circleGroup.selectAll("circle").data(this._a.slice())
+		this._circles.enter().append("circle")
+			.attr("cx",function(d,i){return that._atom_x[that.activeAtom]
+				+that._pos[that.activeAtom].x[i][that.tick];})
+			.attr("cy",function(d,i){return that._pos[that.activeAtom].y[i][that.tick];})
+			.attr("r",function(d){return Math.abs(d);})
+			.style("opacity","0.5");
+			
+		this._circles.exit().remove();
+
+	}
 	this._circles
 		.attr("cx",function(d,i){
 			return that._atom_x[that.activeAtom]
@@ -777,11 +788,11 @@ Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison,fwdbck) {
 		.on("click",function(){
 			//this = span element; that = slideshow object
 			if (that._buttons[name].ison){
-				f_off(this,that);
 				that._buttons[name].ison = false;
+				f_off(this,that);
 			}else{
-				f_on(this,that);
 				that._buttons[name].ison = true;
+				f_on(this,that);
 			}
 		});
 	return this;
@@ -831,7 +842,6 @@ Slideshow.prototype.setActive = function(slide_id) {
 
 	return this;
 };
-
 var sin_trace = new SingleTrig("#sin_trace",200,width,280,100,1,0,60);
 var cos_trace = new SingleTrig("#cos_trace",200,width,280,100,1,Math.PI/2,60);
 var sin_i = new SingleTrig("#sin_i",200,width,320,
@@ -925,15 +935,15 @@ fourierslides.setActiveExtra.push(
 var travelslides = new Slideshow("#travelslides")
 	.addSlides(
 		[
-		new TravelTrig("#travelslides",100,width,300,[70],[1],[0],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70],[0],[1],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70],[1],[1],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70],[-1],[1],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70],[-2],[1],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70],[-1],[2],[0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70,70],[-1,-2],[3,3],[0,0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120,true,false),
-		new TravelTrig("#travelslides",100,width,300,[35,35,35],[1,-2,1],[-0.5*7,-0.5*7,2*0.5*7],[2*Math.PI/3,2*2*Math.PI/3,3*2*Math.PI/3],50,120,true,false)
+		new TravelTrig("#travelslides",100,width,300,[70],[1],[0],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70],[0],[1],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70],[1],[1],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70],[-1],[1],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70],[-2],[1],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70],[-1],[2],[0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70,70],[-1,-2],[3,3],[0,0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[70,70],[1,1],[0.5*7,-0.5*7,],[Math.PI,0],50,120),
+		new TravelTrig("#travelslides",100,width,300,[35,35,35],[1,-2,1],[-0.5*7,-0.5*7,2*0.5*7],[2*Math.PI/3,2*2*Math.PI/3,3*2*Math.PI/3],50,120)
 		],
 		[
 			"<span class=\"eqn\">sin(t)</span><br>With no x-dependence, all atoms are at the same height, regardless of position.",
@@ -983,7 +993,95 @@ var travelslides = new Slideshow("#travelslides")
 	.setActive(0)
 travelslides.autoplay = true;
 
-// on change 
+var sandboxslides = new Slideshow("#sandboxslides")
+	.addSlides(
+		[new TravelTrig("#sandboxslides",100,width,300,[70],[1],[1],[0],50,120)],
+		[""])
+	.addButton("atoms","Show Atoms",
+		function(self,parent){
+			parent._slides[parent._active].toggleAtoms(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].toggleAtoms(false);
+			d3.select(self).style("color","black");
+		},
+		false)
+	.addButton("graph","Show Graph",
+		function(self,parent){
+			parent._slides[parent._active].togglePath(true);
+			d3.select(self).style("color","orange");
+		}, 
+		function(self,parent){
+			parent._slides[parent._active].togglePath(false);
+			d3.select(self).style("color","black");
+		},
+		true)
+	.addButton("circles","Show Circles",
+		function(self,parent){
+			parent._slides[parent._active].toggleCircles(true);
+			d3.select(self).style("color","orange");
+		},
+		function(self,parent){
+			parent._slides[parent._active].toggleCircles(false);
+			d3.select(self).style("color","black");
+
+		},true)
+	.addButton("add","New Term",
+		function(self,parent){
+
+			var slide = parent._slides[parent._active];
+			var input_arr = [
+				parseFloat(prompt("Enter Amplitude. [-2,2]","0.5"))*70, //*MAGIC NUMBER 70
+				parseInt(prompt("Enter temporal frequency. [-10,10]","2")),
+				parseInt(prompt("Enter spatial frequency.[-10,10]","2")),
+				parseFloat(prompt("Enter initial phase.","0"))
+			];
+			for (var i=0; i<input_arr.length; i++){
+				if (isNaN(input_arr[i]) || typeof input_arr[i]!== "number") return;
+			}
+			if(input_arr[0]<-140) input_arr[0] = -140;
+			else if(input_arr[0]>140) input_arr[0] = 140;
+			if(input_arr[1]>10) input_arr[1] = 10;
+			else if(input_arr[1]<-10) input_arr[1] = -10;
+			if(input_arr[2]>10) input_arr[2] = 10;
+			else if(input_arr[2]<-10) input_arr[2] = -10;
+
+			slide._a.push(input_arr[0]);
+			slide._c.push(input_arr[1]);
+			slide._k.push(input_arr[2]);
+			slide._p.push(input_arr[3]);
+			slide._terms++;
+			slide._calculate();
+			slide.rebuilding = true;
+			slide.updateCircles();
+
+			parent.setActive(0);
+			parent._buttons["add"].ison=false;
+		},
+		function(self,parent){
+			return;
+		},false
+);
+
+sandboxslides.setActiveExtra.push(function(parent){
+	var s = parent._slides[parent._active]
+	var str = '';
+	for (var i=0; i<s._terms; i++){
+		//*MAGIC NUMBER 70
+		str = [str,(s._a[i]/70).toFixed(2),"sin(",s._k[i],"x + ",s._c[i],"t + ",s._p[i],")"].join("")
+		if (i===s._terms-1) break;
+		str+= " + ";
+	}
+	parent._captions[parent._active] = str;
+	parent._caption_container.html(parent._captions[parent._active]);
+
+	});
+
+sandboxslides.setActive(0);
+
+
+// on change
 d3.select("#sin_i_a")
 	.on("change",function(){
 		var val = parseFloat(d3.select(this).property("value"));
