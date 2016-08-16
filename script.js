@@ -1029,56 +1029,63 @@ var sandboxslides = new Slideshow("#sandboxslides")
 			d3.select(self).style("color","black");
 
 		},true);
-d3.select("#sandboxslides").append("div").attr("id","sandboxslides_tanglespace");
-sandboxslides.setActive(0);
 
+d3.select("#sandboxslides").append("div").attr("id","sandboxslides_tanglespace");
+var addSandboxTerm = function(parent) {
+	var slide = parent._slides[parent._active];
+	// slide._a.push(35);
+	// slide._k.push(1);
+	// slide._c.push(1);
+	// slide._p.push(0);
+	// slide._terms++; //rebuilding will be called when Tangle is created
+	var span_id = "sandboxslides_tangle_"+(slide._terms-1);
+	var span = d3.select("#sandboxslides_tanglespace").append("span")
+		.attr("id",span_id);
+	span.html("".concat(
+		" + <span class=TKAdjustableNumber data-min=-140 data-max=140 data-var=",span_id,"_a data-val =",slide._a[slide._terms-1],"></span>sin(",
+		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_k data-val =",slide._k[slide._terms-1],"></span>x + ",
+		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_c data-val =",slide._c[slide._terms-1],"></span>t + ",
+		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_p data-val =",slide._p[slide._terms-1],"></span>)"));
+	new Tangle(span[0][0],
+	{
+		initialize: function() {
+			this.term_id = slide._terms-1;
+			eval("this.".concat(span_id,"_a = ",slide._a[this.term_id]));
+			eval("this.".concat(span_id,"_k = ",slide._k[this.term_id]));
+			eval("this.".concat(span_id,"_c = ",slide._c[this.term_id]));
+			eval("this.".concat(span_id,"_p = ",slide._p[this.term_id]));
+		},
+		update: function() {
+			eval("".concat("slide._a[this.term_id] = this.",span_id,"_a"));
+			eval("".concat("slide._k[this.term_id] = this.",span_id,"_k"));
+			eval("".concat("slide._c[this.term_id] = this.",span_id,"_c"));
+			eval("".concat("slide._p[this.term_id] = this.",span_id,"_p"));
+			slide._calculate();
+			slide.rebuilding = true;
+			slide.updateCircles();
+		}
+	})
+	parent.setActive(0);
+	parent._buttons["add"].ison=false;
+};
 sandboxslides.addButton("add","New Term",
 	function(self,parent){
+		console.log(parent);
 		var slide = parent._slides[parent._active];
 		slide._a.push(35);
 		slide._k.push(1);
 		slide._c.push(1);
 		slide._p.push(0);
 		slide._terms++; //rebuilding will be called when Tangle is created
-
-		var span_id = "sandboxslides_tangle_"+(slide._terms-1);
-		var span = d3.select("#sandboxslides_tanglespace").append("span")
-			.attr("id",span_id);
-
-		span.html("".concat(
-			" + <span class=TKAdjustableNumber data-min=-140 data-max=140 data-var=",span_id,"_a data-val =",slide._a[slide._terms-1],"></span>sin(",
-			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_k data-val =",slide._k[slide._terms-1],"></span>x + ",
-			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_c data-val =",slide._c[slide._terms-1],"></span>t + ",
-			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_p data-val =",slide._p[slide._terms-1],"></span>)"));
-
-		new Tangle(span[0][0],
-		{
-			initialize: function() {
-				this.term_id = slide._terms-1;
-				eval("this.".concat(span_id,"_a = ",slide._a[this.term_id]));
-				eval("this.".concat(span_id,"_k = ",slide._k[this.term_id]));
-				eval("this.".concat(span_id,"_c = ",slide._c[this.term_id]));
-				eval("this.".concat(span_id,"_p = ",slide._p[this.term_id]));
-			},
-			update: function() {
-				eval("".concat("slide._a[this.term_id] = this.",span_id,"_a"));
-				eval("".concat("slide._k[this.term_id] = this.",span_id,"_k"));
-				eval("".concat("slide._c[this.term_id] = this.",span_id,"_c"));
-				eval("".concat("slide._p[this.term_id] = this.",span_id,"_p"));
-				slide._calculate();
-				slide.rebuilding = true;
-				slide.updateCircles();
-			}
-		})
-
-		parent.setActive(0);
-		parent._buttons["add"].ison=false;
-
+		addSandboxTerm(parent);
 	},
 	function(self,parent){
 		return;
 	},false
 );
+sandboxslides.setActive(0);
+//include 1st term:
+addSandboxTerm(sandboxslides);
 
 
 // on change
