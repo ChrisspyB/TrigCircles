@@ -645,6 +645,7 @@ TravelTrig.prototype.updateCircles = function() {
 	var that = this;
 	if(this.rebuilding){
 		this._circles = this._circleGroup.selectAll("circle").data(this._a.slice())
+			.attr("r",function(d){return Math.abs(d);})
 		this._circles.enter().append("circle")
 			.attr("cx",function(d,i){return that._atom_x[that.activeAtom]
 				+that._pos[that.activeAtom].x[i][that.tick];})
@@ -653,7 +654,7 @@ TravelTrig.prototype.updateCircles = function() {
 			.style("opacity","0.5");
 			
 		this._circles.exit().remove();
-
+		this.rebuilding = false;
 	}
 	this._circles
 		.attr("cx",function(d,i){
@@ -799,6 +800,7 @@ Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison,fwdbck) {
 };
 
 Slideshow.prototype.setActive = function(slide_id) {
+	console.log("k");
 	if(this._active<0){//first time
 		this._active = slide_id;
 	}else{
@@ -996,7 +998,7 @@ travelslides.autoplay = true;
 var sandboxslides = new Slideshow("#sandboxslides")
 	.addSlides(
 		[new TravelTrig("#sandboxslides",100,width,300,[70],[1],[1],[0],50,120)],
-		[""])
+		["Build your own!"])
 	.addButton("atoms","Show Atoms",
 		function(self,parent){
 			parent._slides[parent._active].toggleAtoms(true);
@@ -1026,59 +1028,57 @@ var sandboxslides = new Slideshow("#sandboxslides")
 			parent._slides[parent._active].toggleCircles(false);
 			d3.select(self).style("color","black");
 
-		},true)
-	.addButton("add","New Term",
-		function(self,parent){
-
-			var slide = parent._slides[parent._active];
-			var input_arr = [
-				parseFloat(prompt("Enter Amplitude. [-2,2]","0.5"))*70, //*MAGIC NUMBER 70
-				parseInt(prompt("Enter temporal frequency. [-10,10]","2")),
-				parseInt(prompt("Enter spatial frequency.[-10,10]","2")),
-				parseFloat(prompt("Enter initial phase.","0"))
-			];
-			for (var i=0; i<input_arr.length; i++){
-				if (isNaN(input_arr[i]) || typeof input_arr[i]!== "number") return;
-			}
-			if(input_arr[0]<-140) input_arr[0] = -140;
-			else if(input_arr[0]>140) input_arr[0] = 140;
-			if(input_arr[1]>10) input_arr[1] = 10;
-			else if(input_arr[1]<-10) input_arr[1] = -10;
-			if(input_arr[2]>10) input_arr[2] = 10;
-			else if(input_arr[2]<-10) input_arr[2] = -10;
-
-			slide._a.push(input_arr[0]);
-			slide._c.push(input_arr[1]);
-			slide._k.push(input_arr[2]);
-			slide._p.push(input_arr[3]);
-			slide._terms++;
-			slide._calculate();
-			slide.rebuilding = true;
-			slide.updateCircles();
-
-			parent.setActive(0);
-			parent._buttons["add"].ison=false;
-		},
-		function(self,parent){
-			return;
-		},false
-);
-
-sandboxslides.setActiveExtra.push(function(parent){
-	var s = parent._slides[parent._active]
-	var str = '';
-	for (var i=0; i<s._terms; i++){
-		//*MAGIC NUMBER 70
-		str = [str,(s._a[i]/70).toFixed(2),"sin(",s._k[i],"x + ",s._c[i],"t + ",s._p[i],")"].join("")
-		if (i===s._terms-1) break;
-		str+= " + ";
-	}
-	parent._captions[parent._active] = str;
-	parent._caption_container.html(parent._captions[parent._active]);
-
-	});
-
+		},true);
+d3.select("#sandboxslides").append("div").attr("id","sandboxslides_tanglespace");
 sandboxslides.setActive(0);
+
+sandboxslides.addButton("add","New Term",
+	function(self,parent){
+		var slide = parent._slides[parent._active];
+		slide._a.push(35);
+		slide._k.push(1);
+		slide._c.push(1);
+		slide._p.push(0);
+		slide._terms++; //rebuilding will be called when Tangle is created
+
+		var span_id = "sandboxslides_tangle_"+(slide._terms-1);
+		var span = d3.select("#sandboxslides_tanglespace").append("span")
+			.attr("id",span_id);
+
+		span.html("".concat(
+			" + <span class=TKAdjustableNumber data-min=-140 data-max=140 data-var=",span_id,"_a data-val =",slide._a[slide._terms-1],"></span>sin(",
+			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_k data-val =",slide._k[slide._terms-1],"></span>x + ",
+			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_c data-val =",slide._c[slide._terms-1],"></span>t + ",
+			"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_p data-val =",slide._p[slide._terms-1],"></span>)"));
+
+		new Tangle(span[0][0],
+		{
+			initialize: function() {
+				this.term_id = slide._terms-1;
+				eval("this.".concat(span_id,"_a = ",slide._a[this.term_id]));
+				eval("this.".concat(span_id,"_k = ",slide._k[this.term_id]));
+				eval("this.".concat(span_id,"_c = ",slide._c[this.term_id]));
+				eval("this.".concat(span_id,"_p = ",slide._p[this.term_id]));
+			},
+			update: function() {
+				eval("".concat("slide._a[this.term_id] = this.",span_id,"_a"));
+				eval("".concat("slide._k[this.term_id] = this.",span_id,"_k"));
+				eval("".concat("slide._c[this.term_id] = this.",span_id,"_c"));
+				eval("".concat("slide._p[this.term_id] = this.",span_id,"_p"));
+				slide._calculate();
+				slide.rebuilding = true;
+				slide.updateCircles();
+			}
+		})
+
+		parent.setActive(0);
+		parent._buttons["add"].ison=false;
+
+	},
+	function(self,parent){
+		return;
+	},false
+);
 
 
 // on change
