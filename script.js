@@ -226,8 +226,6 @@ SingleTrig.prototype.update = function() {
 SingleTrig.prototype._calculate = function(){
 	this._xs = [];
 	this._ys = [];
-	// console.log("building...");
-
 	for (var i=0; i<=this._tickmax; i++){
 		this._xs.push(
 			this._x+this._a*Math.cos(this._p+2*Math.PI*this._c*i/this._tickmax));
@@ -800,7 +798,6 @@ Slideshow.prototype.addButton = function(name,text,f_on,f_off,ison,fwdbck) {
 };
 
 Slideshow.prototype.setActive = function(slide_id) {
-	console.log("k");
 	if(this._active<0){//first time
 		this._active = slide_id;
 	}else{
@@ -1033,16 +1030,11 @@ var sandboxslides = new Slideshow("#sandboxslides")
 d3.select("#sandboxslides").append("div").attr("id","sandboxslides_tanglespace");
 var addSandboxTerm = function(parent) {
 	var slide = parent._slides[parent._active];
-	// slide._a.push(35);
-	// slide._k.push(1);
-	// slide._c.push(1);
-	// slide._p.push(0);
-	// slide._terms++; //rebuilding will be called when Tangle is created
 	var span_id = "sandboxslides_tangle_"+(slide._terms-1);
 	var span = d3.select("#sandboxslides_tanglespace").append("span")
 		.attr("id",span_id);
-	span.html("".concat(
-		" + <span class=TKAdjustableNumber data-min=-140 data-max=140 data-var=",span_id,"_a data-val =",slide._a[slide._terms-1],"></span>sin(",
+	span.html((slide._terms===1?"":" + ").concat(
+		"<span class=TKAdjustableNumber data-min=-140 data-max=140 data-var=",span_id,"_a data-val =",slide._a[slide._terms-1],"></span>sin(",
 		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_k data-val =",slide._k[slide._terms-1],"></span>x + ",
 		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_c data-val =",slide._c[slide._terms-1],"></span>t + ",
 		"<span class=TKAdjustableNumber data-min=-10 data-max=10 data-var=",span_id,"_p data-val =",slide._p[slide._terms-1],"></span>)"));
@@ -1070,7 +1062,6 @@ var addSandboxTerm = function(parent) {
 };
 sandboxslides.addButton("add","New Term",
 	function(self,parent){
-		console.log(parent);
 		var slide = parent._slides[parent._active];
 		slide._a.push(35);
 		slide._k.push(1);
