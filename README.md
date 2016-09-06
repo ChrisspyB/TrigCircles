@@ -1,4 +1,4 @@
-# demo-sine
+# TrigCircles
 
 Project exists primarily for practice with D3.js and SVG manipulation, along with general web design.
 
